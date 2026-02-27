@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <!-- 
+    ╔═══════════════════════════════════════════════════════════════╗
+    ║  MURLAN DIGITAL - Demo Version v1.0                           ║
+    ║  © 2025 Hans-Swathi Srikandaraja (J.)                         ║
+    ║  LIZENZ: Private Nutzung. Weiterverbreitung untersagt.        ║
+    ║  TIMESTAMP: 20250228-1430-CEST                                ║
+    ╚═══════════════════════════════════════════════════════════════╝
+    -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="author" content="Hans-Swathi Srikandaraja">
+    <meta name="copyright" content="© 2025 J. Alle Rechte vorbehalten.">
+    <title>MURLAN Digital - Demo</title>
+    <style>
+        :root {
+            --gold: #D4AF37;
+            --dark-gold: #AA8C2C;
+            --black: #0a0a0a;
+            --dark-gray: #1a1a1a;
+            --light-gold: #F4E8C1;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, var(--black) 0%, #1f1f1f 100%);
+            color: var(--light-gold);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        .watermark {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            opacity: 0.15;
+            font-size: 12px;
+            color: var(--gold);
+            pointer-events: none;
+            z-index: 1000;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            text-align: center;
+            padding: 40px 0;
+            border-bottom: 2px solid var(--gold);
+            margin-bottom: 30px;
+        }
+        
+        h1 {
+            font-size: 3em;
+            color: var(--gold);
+            text-transform: uppercase;
+            letter-spacing: 5px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            font-weight: 300;
+        }
+        
+        .subtitle {
+            color: #888;
+            margin-top: 10px;
+            font-style: italic;
+        }
+        
+        /* Lizenz Screen */
+        #license-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 60vh;
+        }
+        
+        .license-box {
+            background: rgba(212, 175, 55, 0.05);
+            border: 1px solid var(--gold);
+            padding: 40px;
+            border-radius: 10px;
+            text-align: center;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 0 20px rgba(212, 175, 55, 0.1);
+        }
+        
+        .license-input {
+            width: 100%;
+            padding: 15px;
+            margin: 20px 0;
+            background: var(--dark-gray);
+            border: 1px solid var(--dark-gold);
+            color: var(--light-gold);
+            font-size: 1.2em;
+            text-align: center;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            border-radius: 5px;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, var(--gold), var(--dark-gold));
+            color: var(--black);
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 5px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            transition: all 0.3s;
+            margin: 10px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(212, 175, 55, 0.4);
+        }
+        
+        .btn:disabled {
+            background: #444;
+            color: #666;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        /* Dashboard */
+        #dashboard {
+            display: none;
+            text-align: center;
+        }
+        
+        .day-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 15px;
+            margin: 30px auto;
+            max-width: 700px;
+        }
+        
+        .day-slot {
+            aspect-ratio: 1;
+            background: rgba(212, 175, 55, 0.1);
+            border: 2px solid #333;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9em;
+            transition: all 0.3s;
+        }
+        
+        .day-slot.active {
+            border-color: var(--gold);
+            background: rgba(212, 175, 55, 0.2);
+            box-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
+        }
+        
+        .day-slot.used {
+            background: rgba(0, 255, 0, 0.1);
+            border-color: #4a4;
+        }
+        
+        .day-slot.locked {
+            opacity: 0.3;
+        }
+        
+        .day-number {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: var(--gold);
+        }
+        
+        .games-remaining {
+            margin: 30px 0;
+            font-size: 1.3em;
+        }
+        
+        .counter {
+            font-size: 2em;
+            color: var(--gold);
+            font-weight: bold;
+        }
+        
+        .timer-display {
+            background: rgba(0,0,0,0.5);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border: 1px solid var(--dark-gold);
+            display: none;
+        }
+        
+        /* Spielbereich */
+        #game-area {
+            display: none;
+            margin-top: 30px;
+        }
+        
+        .table {
+            background: radial-gradient(circle, #2a4a2a 0%, #1a2f1a 100%);
+            border-radius: 20px;
+            padding: 40px;
+            min-height: 500px;
+            position: relative;
+            border: 3px solid var(--dark-gold);
+            box-shadow: inset 0 0 50px rgba(0,0,0,0.5);
+        }
+        
+        .opponents {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 50px;
+        }
+        
+        .player {
+            text-align: center;
+            padding: 15px;
+            background: rgba(0,0,0,0.6);
+            border-radius: 10px;
+            border: 1px solid var(--gold);
+            min-width: 120px;
+        }
+        
+        .player-name {
+            color: var(--gold);
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .card-count {
+            font-size: 1.5em;
+        }
+        
+        .play-area {
+            height: 200px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            margin: 20px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px dashed var(--dark-gold);
+        }
+        
+        .hand {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .card {
+            width: 80px;
+            height: 120px;
+            background: linear-gradient(135deg, #fff 0%, #ddd 100%);
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #000;
+            font-weight: bold;
+            font-size: 1.5em;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            border: 2px solid #fff;
+            user-select: none;
+        }
+        
+        .card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.5);
+        }
+        
+        .card.selected {
+            border-color: var(--gold);
+            transform: translateY(-15px);
+            box-shadow: 0 0 20px rgba(212, 175, 55, 0.6);
+        }
+        
+        .card.red {
+            color: #d00;
+        }
+        
+        .card.black {
+            color: #000;
+        }
+        
+        .joker {
+            background: linear-gradient(135deg, var(--gold), var(--dark-gold));
+            color: #000;
+            font-size: 0.9em;
+        }
+        
+        .error-msg {
+            color: #f44;
+            margin: 10px 0;
+            font-size: 0.9em;
+        }
+        
+        .success-msg {
+            color: #4f4;
+            margin: 10px 0;
+        }
+        
+        #reset-license {
+            margin-top: 20px;
+            background: transparent;
+            border: 1px solid #444;
+            color: #666;
+            font-size: 0.8em;
+        }
+    </style>
+</head>
+<body>
+    <div class="watermark">© J. 2025 | Srikandaraja</div>
+    
+    <div class="container">
+        <header>
+            <h1>MURLAN</h1>
+            <div class="subtitle">Das legendäre albanische Kartenspiel</div>
+        </header>
+
+        <!-- Lizenz Eingabe -->
+        <div id="license-screen">
+            <div class="license-box">
+                <h2>Demo-Zugang</h2>
+                <p>Geben Sie Ihren Demo-Code ein:</p>
+                <input type="text" id="license-input" class="license-input" placeholder="XXXX-XXXX-XXXX" maxlength="14">
+                <div id="license-error" class="error-msg"></div>
+                <button class="btn" onclick="activateLicense()">Freischalten</button>
+                <div style="margin-top: 20px; font-size: 0.85em; color: #666;">
+                    Testcode: <strong>MURLAN-DEMO-001</strong>
+                </div>
+                <button id="reset-license" onclick="resetLicense()">Lizenz zurücksetzen (Debug)</button>
+            </div>
+        </div>
+
+        <!-- Dashboard -->
+        <div id="dashboard">
+            <h2>Ihre Demo-Lizenz</h2>
+            <div class="day-grid" id="day-grid">
+                <!-- Wird per JS generiert -->
+            </div>
+            
+            <div class="games-remaining">
+                Heute verfügbare Spiele: <span class="counter" id="games-left">4</span>/4
+            </div>
+            
+            <div class="timer-display" id="timer-display">
+                Nächster Tag verfügbar in:<br>
+                <span id="countdown" style="font-size: 1.5em; color: var(--gold);"></span>
+            </div>
+            
+            <button class="btn" id="start-game-btn" onclick="startGame()">Spiel starten</button>
+            <div id="game-limit-msg" class="error-msg" style="margin-top: 10px;"></div>
+        </div>
+
+        <!-- Spielbereich -->
+        <div id="game-area">
+            <div style="text-align: center; margin-bottom: 20px;">
+                <button class="btn" onclick="endGame()">Spiel beenden</button>
+                <span style="margin-left: 20px; color: var(--gold);">Runde: <span id="round-num">1</span></span>
+            </div>
+            
+            <div class="table">
+                <div class="opponents">
+                    <div class="player">
+                        <div class="player-name">Gegner 1</div>
+                        <div class="card-count" id="p1-cards">13 Karten</div>
+                    </div>
+                    <div class="player">
+                        <div class="player-name">Gegner 2</div>
+                        <div class="card-count" id="p2-cards">13 Karten</div>
+                    </div>
+                    <div class="player">
+                        <div class="player-name">Gegner 3</div>
+                        <div class="card-count" id="p3-cards">13 Karten</div>
+                    </div>
+                </div>
+                
+                <div class="play-area" id="play-area">
+                    <span style="color: var(--gold); opacity: 0.5;">Spielbereich</span>
+                </div>
+                
+                <div class="hand" id="player-hand">
+                    <!-- Karten werden hier generiert -->
+                </div>
+            </div>
+            
+            <div style="text-align: center; margin-top: 20px;">
+                <button class="btn" onclick="playSelected()">Ausspielen</button>
+                <button class="btn" onclick="passTurn()">Passen</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ═══════════════════════════════════════════════════════════════
+        // MURLAN DEMO - Lizenzmanagement & Spielkern
+        // Autor: J. (Hans-Swathi Srikandaraja)
+        // Timestamp: 20250228
+        // ═══════════════════════════════════════════════════════════════
+
+        const LICENSE_KEY = 'murlan_demo_license_v1';
+        const DEVICE_ID = 'murlan_device_fingerprint';
+        
+        // Gültige Demo-Codes (In produktion: Serverseitige Validierung)
+        const VALID_CODES = ['MURLAN-DEMO-001', 'MURLAN-TEST-2025', 'ALBANIA-CARD-7'];
+        
+        // Spielkonstanten
+        const MAX_DAYS = 7;
+        const GAMES_PER_DAY = 4;
+        const HOURS_BETWEEN_DAYS = 24;
+        
+        // Kartenwerte Murlan: 3<niedrig ... 2<Joker<farbigJoker
+        const SUITS = ['♠', '♥', '♦', '♣'];
+        const RANKS = ['3','4','5','6','7','8','9','10','J','Q','K','A','2'];
+        const VALUES = {'3':3,'4':4,'5':5,'6':6,'7':7,'8':8,'9':9,'10':10,'J':11,'Q':12,'K':13,'A':14,'2':15};
+        
+        let licenseData = null;
+        let currentGame = null;
+
+        // Geräte-Fingerprint (einfache Version)
+        function getDeviceId() {
+            let fp = localStorage.getItem(DEVICE_ID);
+            if (!fp) {
+                fp = 'DEV-' + Math.random().toString(36).substr(2, 9).toUpperCase();
+                localStorage.setItem(DEVICE_ID, fp);
+            }
+            return fp;
+        }
+
+        // Lizenzprüfung beim Start
+        window.onload = function() {
+            checkExistingLicense();
+        };
+
+        function checkExistingLicense() {
+            const saved = localStorage.getItem(LICENSE_KEY);
+            if (saved) {
+                try {
+                    // Einfache Obfuskierung: Base64 + XOR mit DeviceID
+                    const decoded = atob(saved);
+                    const deviceId = getDeviceId();
+                    let json = '';
+                    for(let i = 0; i < decoded.length; i++) {
+                        json += String.fromCharCode(decoded.charCodeAt(i) ^ deviceId.charCodeAt(i % deviceId.length));
+                    }
+                    licenseData = JSON.parse(json);
+                    
+                    if (validateLicenseData(licenseData)) {
+                        showDashboard();
+                    } else {
+                        localStorage.removeItem(LICENSE_KEY);
+                        showLicenseScreen();
+                    }
+                } catch(e) {
+                    localStorage.removeItem(LICENSE_KEY);
+                    showLicenseScreen();
+                }
+            } else {
+                showLicenseScreen();
+            }
+        }
+
+        function validateLicenseData(data) {
+            if (!data.code || !data.activated || !data.deviceId) return false;
+            if (data.deviceId !== getDeviceId()) return false; // An Gerät gebunden
+            if (data.usedDays.length > MAX_DAYS) return false;
+            return true;
+        }
+
+        function saveLicense() {
+            const deviceId = getDeviceId();
+            const json = JSON.stringify(licenseData);
+            let encoded = '';
+            for(let i = 0; i < json.length; i++) {
+                encoded += String.fromCharCode(json.charCodeAt(i) ^ deviceId.charCodeAt(i % deviceId.length));
+            }
+            localStorage.setItem(LICENSE_KEY, btoa(encoded));
+        }
+
+        function activateLicense() {
+            const input = document.getElementById('license-input').value.toUpperCase().trim();
+            const errorDiv = document.getElementById('license-error');
+            
+            if (!VALID_CODES.includes(input)) {
+                errorDiv.textContent = 'Ungültiger Demo-Code.';
+                return;
+            }
+            
+            // Prüfen ob Code bereits verwendet (hier: nur lokale Prüfung, in Produktion: Server)
+            const usedCodes = JSON.parse(localStorage.getItem('used_codes') || '[]');
+            if (usedCodes.includes(input)) {
+                errorDiv.textContent = 'Dieser Code wurde bereits verwendet.';
+                return;
+            }
+            
+            // Lizenz initialisieren
+            licenseData = {
+                code: input,
+                deviceId: getDeviceId(),
+                activated: new Date().toISOString(),
+                usedDays: [], // Indizes der genutzten Tage [0,1,2...]
+                currentDay: null, // Aktueller Tag (0-6)
+                gamesToday: 0,
+                lastLogin: null,
+                lastGameEnd: null
+            };
+            
+            usedCodes.push(input);
+            localStorage.setItem('used_codes', JSON.stringify(usedCodes));
+            
+            saveLicense();
+            showDashboard();
+        }
+
+        function showLicenseScreen() {
+            document.getElementById('license-screen').style.display = 'flex';
+            document.getElementById('dashboard').style.display = 'none';
+            document.getElementById('game-area').style.display = 'none';
+        }
+
+        function showDashboard() {
+            document.getElementById('license-screen').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'block';
+            document.getElementById('game-area').style.display = 'none';
+            
+            updateDashboard();
+        }
+
+        function updateDashboard() {
+            const grid = document.getElementById('day-grid');
+            grid.innerHTML = '';
+            
+            // Tage rendern
+            for (let i = 0; i < MAX_DAYS; i++) {
+                const dayDiv = document.createElement('div');
+                dayDiv.className = 'day-slot';
+                
+                const isUsed = licenseData.usedDays.includes(i);
+                const isCurrent = licenseData.currentDay === i;
+                
+                if (isUsed) {
+                    dayDiv.classList.add('used');
+                    dayDiv.innerHTML = `<div class="day-number">${i+1}</div><div>✓</div>`;
+                } else if (isCurrent) {
+                    dayDiv.classList.add('active');
+                    dayDiv.innerHTML = `<div class="day-number">${i+1}</div><div>AKTIV</div>`;
+                } else {
+                    dayDiv.classList.add('locked');
+                    dayDiv.innerHTML = `<div class="day-number">${i+1}</div><div>🔒</div>`;
+                }
+                
+                grid.appendChild(dayDiv);
+            }
+            
+            // Prüfe ob neuer Tag verfügbar
+            checkDayAvailability();
+            
+            document.getElementById('games-left').textContent = GAMES_PER_DAY - licenseData.gamesToday;
+            
+            const btn = document.getElementById('start-game-btn');
+            const msg = document.getElementById('game-limit-msg');
+            const timer = document.getElementById('timer-display');
+            
+            if (licenseData.gamesToday >= GAMES_PER_DAY) {
+                btn.disabled = true;
+                msg.textContent = 'Tageslimit erreicht (4 Spiele).';
+                
+                // Timer anzeigen wenn 24h noch nicht rum
+                if (licenseData.lastGameEnd) {
+                    const nextAvailable = new Date(licenseData.lastGameEnd).getTime() + (HOURS_BETWEEN_DAYS * 60 * 60 * 1000);
+                    const now = Date.now();
+                    
+                    if (now < nextAvailable) {
+                        timer.style.display = 'block';
+                        startCountdown(nextAvailable);
+                    } else {
+                        timer.style.display = 'none';
+                        // Automatisch neuen Tag freischalten
+                        nextDay();
+                    }
+                }
+            } else {
+                btn.disabled = false;
+                msg.textContent = '';
+                timer.style.display = 'none';
+            }
+            
+            // Lizenz abgelaufen?
+            if (licenseData.usedDays.length >= MAX_DAYS && licenseData.gamesToday >= GAMES_PER_DAY) {
+                btn.disabled = true;
+                msg.innerHTML = '<strong>Demo abgelaufen.</strong><br>Kaufen Sie die Premium-Version für unbegrenztes Spielen.';
+                msg.style.color = 'var(--gold)';
+            }
+        }
+
+        function checkDayAvailability() {
+            if (!licenseData.lastLogin) {
+                // Erster Login
+                licenseData.currentDay = 0;
+                licenseData.gamesToday = 0;
+                licenseData.lastLogin = new Date().toISOString();
+                saveLicense();
+                return;
+            }
+            
+            const lastLogin = new Date(licenseData.lastLogin).getTime();
+            const hoursSince = (Date.now() - lastLogin) / (1000 * 60 * 60);
+            
+            // Wenn 24h vergangen und wir haben heute gespielt -> neuer Tag
+            if (hoursSince >= HOURS_BETWEEN_DAYS && licenseData.gamesToday > 0) {
+                nextDay();
+            }
+            
+            licenseData.lastLogin = new Date().toISOString();
+            saveLicense();
+        }
+
+        function nextDay() {
+            if (licenseData.currentDay !== null && !licenseData.usedDays.includes(licenseData.currentDay)) {
+                licenseData.usedDays.push(licenseData.currentDay);
+            }
+            
+            if (licenseData.usedDays.length < MAX_DAYS) {
+                // Nächsten freien Tag finden
+                for (let i = 0; i < MAX_DAYS; i++) {
+                    if (!licenseData.usedDays.includes(i)) {
+                        licenseData.currentDay = i;
+                        break;
+                    }
+                }
+                licenseData.gamesToday = 0;
+                licenseData.lastGameEnd = null;
+                saveLicense();
+            }
+        }
+
+        function startCountdown(targetTime) {
+            const updateTimer = () => {
+                const now = Date.now();
+                const diff = targetTime - now;
+                
+                if (diff <= 0) {
+                    document.getElementById('countdown').textContent = 'Verfügbar!';
+                    setTimeout(() => location.reload(), 2000);
+                    return;
+                }
+                
+                const hours = Math.floor(diff / (1000 * 60 * 60));
+                const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+                
+                document.getElementById('countdown').textContent = 
+                    `${hours.toString().padStart(2,'0')}:${minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}`;
+            };
+            
+            updateTimer();
+            setInterval(updateTimer, 1000);
+        }
+
+        function startGame() {
+            if (licenseData.gamesToday >= GAMES_PER_DAY) return;
+            
+            licenseData.gamesToday++;
+            saveLicense();
+            
+            document.getElementById('dashboard').style.display = 'none';
+            document.getElementById('game-area').style.display = 'block';
+            
+            initGame();
+        }
+
+        function endGame() {
+            licenseData.lastGameEnd = new Date().toISOString();
+            saveLicense();
+            showDashboard();
+        }
+
+        function resetLicense() {
+            if (confirm('Lizenz wirklich zurücksetzen?')) {
+                localStorage.removeItem(LICENSE_KEY);
+                location.reload();
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        // SPIELLOGIK (Vereinfachtes Murlan)
+        // ═══════════════════════════════════════════════════════════════
+
+        class MurlanGame {
+            constructor() {
+                this.deck = [];
+                this.players = [[], [], [], []]; // 0=Human, 1-3=AI
+                this.currentPlayer = 0;
+                this.lastPlay = null;
+                this.selectedCards = [];
+                this.initDeck();
+            }
+            
+            initDeck() {
+                this.deck = [];
+                // 52 Karten + 2 Joker
+                for (let suit of SUITS) {
+                    for (let rank of RANKS) {
+                        this.deck.push({suit, rank, value: VALUES[rank], color: (suit === '♥' || suit === '♦') ? 'red' : 'black'});
+                    }
+                }
+                // Joker
+                this.deck.push({suit: 'Joker', rank: 'Joker', value: 50, color: 'joker', type: 'color'});
+                this.deck.push({suit: 'Joker', rank: 'Joker', value: 51, color: 'joker', type: 'bw'});
+                
+                this.shuffle();
+                this.deal();
+            }
+            
+            shuffle() {
+                for (let i = this.deck.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [this.deck[i], this.deck[j]] = [this.deck[j], this.deck[i]];
+                }
+            }
+            
+            deal() {
+                for (let i = 0; i < 13; i++) {
+                    for (let p = 0; p < 4; p++) {
+                        this.players[p].push(this.deck.pop());
+                    }
+                }
+                // Sortiere Human-Hand
+                this.players[0].sort((a,b) => a.value - b.value);
+            }
+        }
+
+        function initGame() {
+            currentGame = new MurlanGame();
+            renderHand();
+            updateOpponents();
+            document.getElementById('round-num').textContent = '1';
+        }
+
+        function renderHand() {
+            const hand = document.getElementById('player-hand');
+            hand.innerHTML = '';
+            
+            currentGame.players[0].forEach((card, idx) => {
+                const div = document.createElement('div');
+                div.className = `card ${card.color === 'red' ? 'red' : 'black'} ${card.color === 'joker' ? 'joker' : ''}`;
+                div.innerHTML = card.color === 'joker' ? 'JOKER' : `${card.rank}<br>${card.suit}`;
+                div.onclick = () => toggleCard(idx, div);
+                hand.appendChild(div);
+            });
+        }
+
+        function toggleCard(idx, element) {
+            const pos = currentGame.selectedCards.indexOf(idx);
+            if (pos > -1) {
+                currentGame.selectedCards.splice(pos, 1);
+                element.classList.remove('selected');
+            } else {
+                currentGame.selectedCards.push(idx);
+                element.classList.add('selected');
+            }
+        }
+
+        function updateOpponents() {
+            for (let i = 1; i <= 3; i++) {
+                document.getElementById(`p${i}-cards`).textContent = 
+                    currentGame.players[i].length + ' Karten';
+            }
+        }
+
+        function playSelected() {
+            if (currentGame.selectedCards.length === 0) return;
+            
+            // Sortiere nach Index (absteigend für korrektes Entfernen)
+            currentGame.selectedCards.sort((a,b) => b-a);
+            
+            const played = currentGame.selectedCards.map(idx => currentGame.players[0][idx]);
+            
+            // Validierung (einfache Version: immer erlaubt)
+            const playArea = document.getElementById('play-area');
+            playArea.innerHTML = '';
+            played.forEach(card => {
+                const div = document.createElement('div');
+                div.className = `card ${card.color === 'red' ? 'red' : 'black'} ${card.color === 'joker' ? 'joker' : ''}`;
+                div.style.margin = '0 5px';
+                div.innerHTML = card.color === 'joker' ? '★' : `${card.rank}${card.suit}`;
+                playArea.appendChild(div);
+            });
+            
+            // Entferne aus Hand
+            currentGame.selectedCards.forEach(idx => {
+                currentGame.players[0].splice(idx, 1);
+            });
+            currentGame.selectedCards = [];
+            
+            renderHand();
+            
+            // Prüfe auf Gewinn
+            if (currentGame.players[0].length === 0) {
+                setTimeout(() => {
+                    alert('Sie haben gewonnen!');
+                    endGame();
+                }, 500);
+            } else {
+                // AI Züge (vereinfacht)
+                setTimeout(aiTurn, 1000);
+            }
+        }
+
+        function passTurn() {
+            currentGame.selectedCards = [];
+            document.querySelectorAll('.card.selected').forEach(c => c.classList.remove('selected'));
+            aiTurn();
+        }
+
+        function aiTurn() {
+            // Einfache AI: Zufälliger Gegner legt eine Karte ab
+            for (let i = 1; i <= 3; i++) {
+                if (currentGame.players[i].length > 0) {
+                    const card = currentGame.players[i].pop();
+                    const playArea = document.getElementById('play-area');
+                    playArea.innerHTML = '';
+                    const div = document.createElement('div');
+                    div.className = `card ${card.color === 'red' ? 'red' : 'black'}`;
+                    div.innerHTML = card.color === 'joker' ? '★' : `${card.rank}${card.suit}`;
+                    playArea.appendChild(div);
+                    
+                    updateOpponents();
+                    
+                    if (currentGame.players[i].length === 0) {
+                        setTimeout(() => {
+                            alert(`Gegner ${i} hat gewonnen!`);
+                            endGame();
+                        }, 500);
+                    }
+                    break;
+                }
+            }
+        }
+    </script>
+</body>
+</html>
