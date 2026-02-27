@@ -3,16 +3,14 @@
 <head>
     <!-- 
     ╔═══════════════════════════════════════════════════════════════╗
-    ║  MURLAN DIGITAL - Demo Version v1.0                           ║
+    ║  MURLAN DIGITAL - Demo Version v1.1 (FIXED)                   ║
     ║  © 2025 Hans-Swathi Srikandaraja (J.)                         ║
-    ║  LIZENZ: Private Nutzung. Weiterverbreitung untersagt.        ║
-    ║  TIMESTAMP: 20250228-1430-CEST                                ║
+    ║  TIMESTAMP: 20250228-1445-CEST                                ║
     ╚═══════════════════════════════════════════════════════════════╝
     -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="author" content="Hans-Swathi Srikandaraja">
-    <meta name="copyright" content="© 2025 J. Alle Rechte vorbehalten.">
     <title>MURLAN Digital - Demo</title>
     <style>
         :root {
@@ -77,8 +75,7 @@
             margin-top: 10px;
             font-style: italic;
         }
-        
-        /* Lizenz Screen */
+
         #license-screen {
             display: flex;
             flex-direction: column;
@@ -136,10 +133,8 @@
             background: #444;
             color: #666;
             cursor: not-allowed;
-            transform: none;
         }
         
-        /* Dashboard */
         #dashboard {
             display: none;
             text-align: center;
@@ -207,7 +202,6 @@
             display: none;
         }
         
-        /* Spielbereich */
         #game-area {
             display: none;
             margin-top: 30px;
@@ -218,7 +212,6 @@
             border-radius: 20px;
             padding: 40px;
             min-height: 500px;
-            position: relative;
             border: 3px solid var(--dark-gold);
             box-shadow: inset 0 0 50px rgba(0,0,0,0.5);
         }
@@ -315,6 +308,7 @@
             color: #f44;
             margin: 10px 0;
             font-size: 0.9em;
+            min-height: 20px;
         }
         
         .success-msg {
@@ -322,12 +316,14 @@
             margin: 10px 0;
         }
         
-        #reset-license {
+        .debug-info {
             margin-top: 20px;
-            background: transparent;
-            border: 1px solid #444;
+            padding: 10px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 5px;
+            font-size: 0.75em;
             color: #666;
-            font-size: 0.8em;
+            font-family: monospace;
         }
     </style>
 </head>
@@ -340,27 +336,27 @@
             <div class="subtitle">Das legendäre albanische Kartenspiel</div>
         </header>
 
-        <!-- Lizenz Eingabe -->
         <div id="license-screen">
             <div class="license-box">
                 <h2>Demo-Zugang</h2>
                 <p>Geben Sie Ihren Demo-Code ein:</p>
-                <input type="text" id="license-input" class="license-input" placeholder="XXXX-XXXX-XXXX" maxlength="14">
+                <input type="text" id="license-input" class="license-input" placeholder="MURLAN-DEMO-001" maxlength="25">
                 <div id="license-error" class="error-msg"></div>
                 <button class="btn" onclick="activateLicense()">Freischalten</button>
-                <div style="margin-top: 20px; font-size: 0.85em; color: #666;">
-                    Testcode: <strong>MURLAN-DEMO-001</strong>
+                
+                <div class="debug-info">
+                    <strong>Gültige Test-Codes:</strong><br>
+                    MURLAN-DEMO-001<br>
+                    MURLAN-TEST-2025<br>
+                    ALBANIA-CARD-7<br>
+                    <button onclick="fillTestCode()" style="margin-top:5px; padding:5px; font-size:0.9em;">Code einfügen</button>
                 </div>
-                <button id="reset-license" onclick="resetLicense()">Lizenz zurücksetzen (Debug)</button>
             </div>
         </div>
 
-        <!-- Dashboard -->
         <div id="dashboard">
             <h2>Ihre Demo-Lizenz</h2>
-            <div class="day-grid" id="day-grid">
-                <!-- Wird per JS generiert -->
-            </div>
+            <div class="day-grid" id="day-grid"></div>
             
             <div class="games-remaining">
                 Heute verfügbare Spiele: <span class="counter" id="games-left">4</span>/4
@@ -373,9 +369,10 @@
             
             <button class="btn" id="start-game-btn" onclick="startGame()">Spiel starten</button>
             <div id="game-limit-msg" class="error-msg" style="margin-top: 10px;"></div>
+            
+            <button class="btn" onclick="resetLicense()" style="margin-top:30px; background:transparent; border:1px solid #444; color:#666; font-size:0.8em;">Lizenz zurücksetzen</button>
         </div>
 
-        <!-- Spielbereich -->
         <div id="game-area">
             <div style="text-align: center; margin-bottom: 20px;">
                 <button class="btn" onclick="endGame()">Spiel beenden</button>
@@ -402,9 +399,7 @@
                     <span style="color: var(--gold); opacity: 0.5;">Spielbereich</span>
                 </div>
                 
-                <div class="hand" id="player-hand">
-                    <!-- Karten werden hier generiert -->
-                </div>
+                <div class="hand" id="player-hand"></div>
             </div>
             
             <div style="text-align: center; margin-top: 20px;">
@@ -416,23 +411,24 @@
 
     <script>
         // ═══════════════════════════════════════════════════════════════
-        // MURLAN DEMO - Lizenzmanagement & Spielkern
+        // MURLAN DEMO - Korrigierte Version v1.1
         // Autor: J. (Hans-Swathi Srikandaraja)
-        // Timestamp: 20250228
         // ═══════════════════════════════════════════════════════════════
 
         const LICENSE_KEY = 'murlan_demo_license_v1';
         const DEVICE_ID = 'murlan_device_fingerprint';
         
-        // Gültige Demo-Codes (In produktion: Serverseitige Validierung)
-        const VALID_CODES = ['MURLAN-DEMO-001', 'MURLAN-TEST-2025', 'ALBANIA-CARD-7'];
+        const VALID_CODES = [
+            'MURLAN-DEMO-001', 
+            'MURLAN-TEST-2025', 
+            'ALBANIA-CARD-7',
+            'DEMO-2025-FREE'
+        ];
         
-        // Spielkonstanten
         const MAX_DAYS = 7;
         const GAMES_PER_DAY = 4;
         const HOURS_BETWEEN_DAYS = 24;
         
-        // Kartenwerte Murlan: 3<niedrig ... 2<Joker<farbigJoker
         const SUITS = ['♠', '♥', '♦', '♣'];
         const RANKS = ['3','4','5','6','7','8','9','10','J','Q','K','A','2'];
         const VALUES = {'3':3,'4':4,'5':5,'6':6,'7':7,'8':8,'9':9,'10':10,'J':11,'Q':12,'K':13,'A':14,'2':15};
@@ -440,7 +436,10 @@
         let licenseData = null;
         let currentGame = null;
 
-        // Geräte-Fingerprint (einfache Version)
+        function fillTestCode() {
+            document.getElementById('license-input').value = 'MURLAN-DEMO-001';
+        }
+
         function getDeviceId() {
             let fp = localStorage.getItem(DEVICE_ID);
             if (!fp) {
@@ -450,7 +449,6 @@
             return fp;
         }
 
-        // Lizenzprüfung beim Start
         window.onload = function() {
             checkExistingLicense();
         };
@@ -459,7 +457,6 @@
             const saved = localStorage.getItem(LICENSE_KEY);
             if (saved) {
                 try {
-                    // Einfache Obfuskierung: Base64 + XOR mit DeviceID
                     const decoded = atob(saved);
                     const deviceId = getDeviceId();
                     let json = '';
@@ -484,9 +481,9 @@
         }
 
         function validateLicenseData(data) {
-            if (!data.code || !data.activated || !data.deviceId) return false;
-            if (data.deviceId !== getDeviceId()) return false; // An Gerät gebunden
-            if (data.usedDays.length > MAX_DAYS) return false;
+            if (!data || !data.code || !data.activated || !data.deviceId) return false;
+            if (data.deviceId !== getDeviceId()) return false;
+            if (!Array.isArray(data.usedDays)) return false;
             return true;
         }
 
@@ -504,27 +501,32 @@
             const input = document.getElementById('license-input').value.toUpperCase().trim();
             const errorDiv = document.getElementById('license-error');
             
-            if (!VALID_CODES.includes(input)) {
-                errorDiv.textContent = 'Ungültiger Demo-Code.';
+            errorDiv.textContent = '';
+            
+            if (!input) {
+                errorDiv.textContent = 'Bitte geben Sie einen Code ein.';
                 return;
             }
             
-            // Prüfen ob Code bereits verwendet (hier: nur lokale Prüfung, in Produktion: Server)
+            if (!VALID_CODES.includes(input)) {
+                errorDiv.textContent = 'Ungültiger Demo-Code. Verwenden Sie einen der angezeigten Test-Codes.';
+                return;
+            }
+            
             const usedCodes = JSON.parse(localStorage.getItem('used_codes') || '[]');
             if (usedCodes.includes(input)) {
-                errorDiv.textContent = 'Dieser Code wurde bereits verwendet.';
+                errorDiv.textContent = 'Dieser Code wurde bereits auf diesem Gerät verwendet.';
                 return;
             }
             
-            // Lizenz initialisieren
             licenseData = {
                 code: input,
                 deviceId: getDeviceId(),
                 activated: new Date().toISOString(),
-                usedDays: [], // Indizes der genutzten Tage [0,1,2...]
-                currentDay: null, // Aktueller Tag (0-6)
+                usedDays: [],
+                currentDay: 0,
                 gamesToday: 0,
-                lastLogin: null,
+                lastLogin: new Date().toISOString(),
                 lastGameEnd: null
             };
             
@@ -545,7 +547,6 @@
             document.getElementById('license-screen').style.display = 'none';
             document.getElementById('dashboard').style.display = 'block';
             document.getElementById('game-area').style.display = 'none';
-            
             updateDashboard();
         }
 
@@ -553,7 +554,6 @@
             const grid = document.getElementById('day-grid');
             grid.innerHTML = '';
             
-            // Tage rendern
             for (let i = 0; i < MAX_DAYS; i++) {
                 const dayDiv = document.createElement('div');
                 dayDiv.className = 'day-slot';
@@ -575,9 +575,7 @@
                 grid.appendChild(dayDiv);
             }
             
-            // Prüfe ob neuer Tag verfügbar
             checkDayAvailability();
-            
             document.getElementById('games-left').textContent = GAMES_PER_DAY - licenseData.gamesToday;
             
             const btn = document.getElementById('start-game-btn');
@@ -588,7 +586,6 @@
                 btn.disabled = true;
                 msg.textContent = 'Tageslimit erreicht (4 Spiele).';
                 
-                // Timer anzeigen wenn 24h noch nicht rum
                 if (licenseData.lastGameEnd) {
                     const nextAvailable = new Date(licenseData.lastGameEnd).getTime() + (HOURS_BETWEEN_DAYS * 60 * 60 * 1000);
                     const now = Date.now();
@@ -598,7 +595,6 @@
                         startCountdown(nextAvailable);
                     } else {
                         timer.style.display = 'none';
-                        // Automatisch neuen Tag freischalten
                         nextDay();
                     }
                 }
@@ -608,17 +604,14 @@
                 timer.style.display = 'none';
             }
             
-            // Lizenz abgelaufen?
             if (licenseData.usedDays.length >= MAX_DAYS && licenseData.gamesToday >= GAMES_PER_DAY) {
                 btn.disabled = true;
                 msg.innerHTML = '<strong>Demo abgelaufen.</strong><br>Kaufen Sie die Premium-Version für unbegrenztes Spielen.';
-                msg.style.color = 'var(--gold)';
             }
         }
 
         function checkDayAvailability() {
             if (!licenseData.lastLogin) {
-                // Erster Login
                 licenseData.currentDay = 0;
                 licenseData.gamesToday = 0;
                 licenseData.lastLogin = new Date().toISOString();
@@ -629,7 +622,6 @@
             const lastLogin = new Date(licenseData.lastLogin).getTime();
             const hoursSince = (Date.now() - lastLogin) / (1000 * 60 * 60);
             
-            // Wenn 24h vergangen und wir haben heute gespielt -> neuer Tag
             if (hoursSince >= HOURS_BETWEEN_DAYS && licenseData.gamesToday > 0) {
                 nextDay();
             }
@@ -644,7 +636,6 @@
             }
             
             if (licenseData.usedDays.length < MAX_DAYS) {
-                // Nächsten freien Tag finden
                 for (let i = 0; i < MAX_DAYS; i++) {
                     if (!licenseData.usedDays.includes(i)) {
                         licenseData.currentDay = i;
@@ -654,6 +645,7 @@
                 licenseData.gamesToday = 0;
                 licenseData.lastGameEnd = null;
                 saveLicense();
+                updateDashboard();
             }
         }
 
@@ -699,35 +691,34 @@
         }
 
         function resetLicense() {
-            if (confirm('Lizenz wirklich zurücksetzen?')) {
+            if (confirm('Lizenz wirklich zurücksetzen? Alle Fortschritte gehen verloren.')) {
                 localStorage.removeItem(LICENSE_KEY);
+                localStorage.removeItem('used_codes');
                 location.reload();
             }
         }
 
-        // ═══════════════════════════════════════════════════════════════
-        // SPIELLOGIK (Vereinfachtes Murlan)
-        // ═══════════════════════════════════════════════════════════════
-
+        // SPIELLOGIK
         class MurlanGame {
             constructor() {
                 this.deck = [];
-                this.players = [[], [], [], []]; // 0=Human, 1-3=AI
+                this.players = [[], [], [], []];
                 this.currentPlayer = 0;
-                this.lastPlay = null;
                 this.selectedCards = [];
                 this.initDeck();
             }
             
             initDeck() {
                 this.deck = [];
-                // 52 Karten + 2 Joker
                 for (let suit of SUITS) {
                     for (let rank of RANKS) {
-                        this.deck.push({suit, rank, value: VALUES[rank], color: (suit === '♥' || suit === '♦') ? 'red' : 'black'});
+                        this.deck.push({
+                            suit, rank, 
+                            value: VALUES[rank], 
+                            color: (suit === '♥' || suit === '♦') ? 'red' : 'black'
+                        });
                     }
                 }
-                // Joker
                 this.deck.push({suit: 'Joker', rank: 'Joker', value: 50, color: 'joker', type: 'color'});
                 this.deck.push({suit: 'Joker', rank: 'Joker', value: 51, color: 'joker', type: 'bw'});
                 
@@ -748,7 +739,6 @@
                         this.players[p].push(this.deck.pop());
                     }
                 }
-                // Sortiere Human-Hand
                 this.players[0].sort((a,b) => a.value - b.value);
             }
         }
@@ -757,7 +747,6 @@
             currentGame = new MurlanGame();
             renderHand();
             updateOpponents();
-            document.getElementById('round-num').textContent = '1';
         }
 
         function renderHand() {
@@ -794,12 +783,9 @@
         function playSelected() {
             if (currentGame.selectedCards.length === 0) return;
             
-            // Sortiere nach Index (absteigend für korrektes Entfernen)
             currentGame.selectedCards.sort((a,b) => b-a);
-            
             const played = currentGame.selectedCards.map(idx => currentGame.players[0][idx]);
             
-            // Validierung (einfache Version: immer erlaubt)
             const playArea = document.getElementById('play-area');
             playArea.innerHTML = '';
             played.forEach(card => {
@@ -810,7 +796,6 @@
                 playArea.appendChild(div);
             });
             
-            // Entferne aus Hand
             currentGame.selectedCards.forEach(idx => {
                 currentGame.players[0].splice(idx, 1);
             });
@@ -818,14 +803,12 @@
             
             renderHand();
             
-            // Prüfe auf Gewinn
             if (currentGame.players[0].length === 0) {
                 setTimeout(() => {
                     alert('Sie haben gewonnen!');
                     endGame();
                 }, 500);
             } else {
-                // AI Züge (vereinfacht)
                 setTimeout(aiTurn, 1000);
             }
         }
@@ -837,7 +820,6 @@
         }
 
         function aiTurn() {
-            // Einfache AI: Zufälliger Gegner legt eine Karte ab
             for (let i = 1; i <= 3; i++) {
                 if (currentGame.players[i].length > 0) {
                     const card = currentGame.players[i].pop();
