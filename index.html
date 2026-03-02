@@ -1,1749 +1,1011 @@
 <!DOCTYPE html>
-<html lang="de" dir="ltr">
+<html lang="de">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MURLAN - Albanian Poker Edition</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WarMap Intelligence Radio • Secure Live Feed 2026</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" />
     
+    <!-- Firebase für Echtzeit (optional, für echtes Backend) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Playfair+Display:wght@400;700&family=Roboto:wght@300;400;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=JetBrains+Mono:wght@400;700&display=swap');
         
         :root {
-            --gold: #D4AF37;
-            --gold-light: #F4E8C1;
-            --gold-dark: #AA8C2C;
-            --felt-green: #1b4d3e;
-            --felt-dark: #0d3329;
-            --felt-light: #2d6b56;
-            --albanian-red: #c41e3a;
-            --albanian-black: #1a1a1a;
-            --wood: #3d2817;
-            --wood-light: #5c4025;
+            --bg-deep: #0a0e1a;
+            --bg-panel: rgba(10, 20, 40, 0.95);
+            --cyan: #00d4ff;
+            --red: #ff3366;
+            --green: #00ff88;
+            --orange: #ff8800;
+            --text: #e0e6ed;
+            --text-dim: #8b92a8;
+            --border: rgba(0, 212, 255, 0.3);
         }
-        
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            touch-action: manipulation;
-            -webkit-tap-highlight-color: transparent;
-        }
-        
+
+        * { margin:0; padding:0; box-sizing:border-box; }
         body {
-            font-family: 'Roboto', sans-serif;
-            background: linear-gradient(135deg, var(--albanian-black) 0%, #0a0a0a 50%, var(--albanian-black) 100%);
-            color: var(--gold-light);
-            min-height: 100vh;
-            overflow-x: hidden;
-            position: relative;
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-deep);
+            color: var(--text);
+            overflow: hidden;
+            height: 100vh;
         }
-        
-        /* Wasserzeichen */
+
         .watermark {
             position: fixed;
-            bottom: 10px;
-            right: 10px;
-            font-size: 12px;
-            color: rgba(212, 175, 55, 0.3);
-            font-family: 'Cinzel', serif;
-            z-index: 1000;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%) rotate(-45deg);
+            font-size: 8rem;
+            color: rgba(255,255,255,0.02);
+            font-family: 'JetBrains Mono', monospace;
+            z-index: 9999;
             pointer-events: none;
-            text-align: right;
-            line-height: 1.4;
+            user-select: none;
+            letter-spacing: 10px;
         }
-        
-        /* Albanischer Adler Header */
-        .header {
-            background: linear-gradient(180deg, rgba(196,30,58,0.2) 0%, rgba(0,0,0,0) 100%),
-                        linear-gradient(90deg, transparent 0%, rgba(212,175,55,0.1) 50%, transparent 100%);
-            padding: 15px;
-            text-align: center;
-            border-bottom: 3px solid var(--gold-dark);
-            position: relative;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-        }
-        
-        .header::before, .header::after {
-            content: "🦅";
+
+        #map {
             position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-            font-size: 2rem;
-            opacity: 0.3;
-            filter: drop-shadow(0 0 10px rgba(212,175,55,0.5));
+            top: 60px;
+            left: 0;
+            width: 100%;
+            height: calc(100vh - 102px);
+            z-index: 1;
+        }
+
+        /* RADIO BAR - Mit Zeitzone */
+        .radio-bar {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            height: 60px;
+            background: rgba(10, 15, 35, 0.98);
+            border-bottom: 2px solid var(--cyan);
+            display: flex;
+            align-items: center;
+            padding: 0 25px;
+            z-index: 10000;
+            box-shadow: 0 4px 20px rgba(0,212,255,0.2);
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .radio-status {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1rem;
+        }
+        .live-dot {
+            width: 14px; height: 14px;
+            background: #ff3366;
+            border-radius: 50%;
+            animation: pulse-radio 1.5s infinite;
+            box-shadow: 0 0 10px #ff3366;
+        }
+        .live-dot.broadcasting {
+            background: var(--green);
+            box-shadow: 0 0 15px var(--green);
+            animation: pulse-green 1s infinite;
+        }
+        @keyframes pulse-radio {
+            0%,100% { opacity: 0.6; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.1); }
+        }
+        @keyframes pulse-green {
+            0%,100% { opacity: 1; box-shadow: 0 0 5px var(--green); }
+            50% { opacity: 0.7; box-shadow: 0 0 20px var(--green); }
+        }
+        .radio-zone-info {
+            margin-left: 30px;
+            padding-left: 20px;
+            border-left: 1px solid var(--border);
+            color: var(--cyan);
+            font-size: 0.9rem;
+        }
+        .radio-zone-name {
+            color: var(--text);
+            font-size: 0.8rem;
+            opacity: 0.8;
+        }
+
+        /* TICKER */
+        .ticker {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            height: 42px;
+            background: rgba(10,15,35,0.95);
+            border-top: 1px solid var(--cyan);
+            overflow: hidden;
+            z-index: 10001;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+        }
+        .ticker-content {
+            display: inline-block;
+            padding-left: 100%;
+            animation: ticker-scroll 40s linear infinite;
+        }
+        @keyframes ticker-scroll {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-100%); }
+        }
+        .ticker-item {
+            display: inline-block;
+            margin-right: 50px;
+            color: var(--text-dim);
+        }
+        .ticker-item.alert {
+            color: var(--red);
+            font-weight: 700;
+        }
+        .ticker-item.new::before {
+            content: '● ';
+            color: var(--red);
+            animation: blink 1s infinite;
+        }
+
+        /* TELEGRAM PANEL - Erweitert */
+        .telegram-panel {
+            position: fixed;
+            top: 80px; right: -420px;
+            width: 400px;
+            height: calc(100vh - 140px);
+            background: var(--bg-panel);
+            border-left: 2px solid var(--cyan);
+            border-radius: 12px 0 0 12px;
+            padding: 25px;
+            transition: right 0.4s cubic-bezier(0.23,1,0.32,1);
+            z-index: 10002;
+            box-shadow: -10px 0 40px rgba(0,0,0,0.8);
+            overflow-y: auto;
+            backdrop-filter: blur(10px);
+        }
+        .telegram-panel.open { right: 0; }
+        .tg-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border);
+        }
+        .tg-title { 
+            color: var(--cyan); 
+            font-weight: 700; 
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .tg-close { 
+            cursor: pointer; 
+            color: var(--text-dim); 
+            font-size: 1.2rem;
+            transition: 0.2s;
+        }
+        .tg-close:hover { color: var(--red); transform: rotate(90deg); }
+        
+        .tg-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+        .tg-section-title {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            letter-spacing: 1px;
+        }
+        .tg-bot-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--green);
+            font-size: 0.9rem;
+        }
+        .tg-status-dot {
+            width: 8px; height: 8px;
+            background: var(--green);
+            border-radius: 50%;
+            box-shadow: 0 0 8px var(--green);
         }
         
-        .header::before { left: 20px; }
-        .header::after { right: 20px; }
-        
-        .logo {
-            font-family: 'Cinzel', serif;
-            font-size: 2.2rem;
+        .tg-input {
+            width: 100%;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 12px;
+            border-radius: 6px;
+            font-family: inherit;
+            margin-bottom: 10px;
+            resize: vertical;
+            min-height: 80px;
+        }
+        .tg-input:focus {
+            outline: none;
+            border-color: var(--cyan);
+            box-shadow: 0 0 10px rgba(0,212,255,0.2);
+        }
+        .tg-btn {
+            width: 100%;
+            padding: 12px;
+            background: var(--cyan);
+            color: #000;
+            border: none;
+            border-radius: 6px;
             font-weight: 700;
-            background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 50%, var(--gold) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 1px;
+        }
+        .tg-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,212,255,0.4);
+        }
+        .tg-btn.processing {
+            background: var(--orange);
+            pointer-events: none;
+        }
+        
+        .tg-inbox {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .tg-message {
+            background: rgba(255,255,255,0.05);
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            font-size: 0.85rem;
+            border-left: 3px solid var(--cyan);
+        }
+        .tg-message-time {
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            margin-top: 4px;
+        }
+
+        /* FLOATING BUTTONS */
+        .fab-container {
+            position: fixed;
+            bottom: 70px; right: 25px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            z-index: 10003;
+        }
+        .fab {
+            width: 58px; height: 58px;
+            background: var(--bg-panel);
+            border: 2px solid var(--cyan);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            color: var(--cyan);
+            box-shadow: 0 8px 25px rgba(0,212,255,0.3);
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        .fab:hover {
+            transform: scale(1.12) rotate(12deg);
+            background: var(--cyan);
+            color: #000;
+        }
+        .fab.alert {
+            border-color: var(--red);
+            color: var(--red);
+            animation: pulse-border 2s infinite;
+        }
+        @keyframes pulse-border {
+            0%,100% { box-shadow: 0 0 0 0 rgba(255,51,102,0.4); }
+            50% { box-shadow: 0 0 0 10px rgba(255,51,102,0); }
+        }
+
+        /* ACCESS MODAL */
+        .modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.9);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 20000;
+            backdrop-filter: blur(5px);
+        }
+        .modal-content {
+            background: var(--bg-panel);
+            padding: 40px;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 420px;
+            border: 1px solid var(--cyan);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+        }
+        .modal-title {
+            color: var(--cyan);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        .modal-text {
+            color: var(--text-dim);
+            text-align: center;
+            margin-bottom: 25px;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+        .code-input {
+            width: 100%;
+            padding: 15px;
+            background: rgba(0,0,0,0.3);
+            border: 2px solid var(--border);
+            color: var(--text);
+            border-radius: 8px;
+            text-align: center;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.2rem;
             letter-spacing: 4px;
             text-transform: uppercase;
         }
-        
-        .subtitle {
-            color: var(--gold-dark);
-            font-size: 0.85rem;
-            margin-top: 5px;
-            opacity: 0.9;
-            font-family: 'Playfair Display', serif;
-            font-style: italic;
+        .code-input:focus {
+            outline: none;
+            border-color: var(--cyan);
         }
-        
-        /* Navigation */
-        .nav-tabs {
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-            padding: 12px;
-            background: rgba(0,0,0,0.4);
-            border-bottom: 1px solid var(--gold-dark);
-            flex-wrap: wrap;
-        }
-        
-        .nav-tab {
-            padding: 8px 18px;
-            background: linear-gradient(135deg, rgba(212,175,55,0.1) 0%, rgba(212,175,55,0.05) 100%);
-            border: 1px solid var(--gold-dark);
-            color: var(--gold);
-            cursor: pointer;
-            border-radius: 20px;
-            transition: all 0.3s;
-            font-family: 'Cinzel', serif;
-            font-size: 0.85rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-        
-        .nav-tab:hover, .nav-tab.active {
-            background: linear-gradient(135deg, var(--gold) 0%, var(--gold-dark) 100%);
-            color: var(--albanian-black);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(212,175,55,0.3);
-        }
-        
-        /* Screens */
-        .screen {
-            display: none;
+        .access-btn {
+            width: 100%;
+            margin-top: 20px;
             padding: 15px;
-            max-width: 1200px;
-            margin: 0 auto;
-            animation: fadeIn 0.5s;
-        }
-        
-        .screen.active {
-            display: block;
-        }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        /* Buttons */
-        .btn {
-            padding: 10px 20px;
-            background: linear-gradient(135deg, var(--gold) 0%, var(--gold-dark) 100%);
-            color: var(--albanian-black);
-            border: none;
-            border-radius: 25px;
-            cursor: pointer;
-            font-weight: 700;
-            font-family: 'Cinzel', serif;
-            transition: all 0.3s;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            box-shadow: 0 4px 12px rgba(212,175,55,0.3);
-            font-size: 0.85rem;
-            border: 2px solid transparent;
-        }
-        
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(212,175,55,0.4);
-            border-color: var(--gold-light);
-        }
-        
-        .btn:disabled {
-            opacity: 0.4;
-            cursor: not-allowed;
-            transform: none;
-            border-color: transparent;
-        }
-        
-        .btn-secondary {
-            background: transparent;
-            border: 2px solid var(--gold);
-            color: var(--gold);
-        }
-        
-        .btn-secondary:hover {
-            background: rgba(212,175,55,0.1);
-        }
-        
-        .btn-danger {
-            background: linear-gradient(135deg, var(--albanian-red) 0%, #8b0000 100%);
+            background: var(--red);
             color: white;
-            border: 2px solid transparent;
-        }
-        
-        .btn-help {
-            background: linear-gradient(135deg, #2d6b56 0%, var(--felt-green) 100%);
-            color: var(--gold-light);
-            border: 2px solid var(--gold);
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            z-index: 100;
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            font-size: 1.5rem;
-            padding: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-        }
-        
-        /* Poker Table Design */
-        .game-board {
-            background: 
-                radial-gradient(ellipse at center, var(--felt-green) 0%, var(--felt-dark) 70%),
-                repeating-linear-gradient(45deg, transparent, transparent 35px, rgba(0,0,0,.1) 35px, rgba(0,0,0,.1) 70px);
-            border: 12px solid var(--wood);
-            border-radius: 20px;
-            padding: 15px;
-            min-height: 600px;
-            position: relative;
-            overflow: hidden;
-            box-shadow: 
-                inset 0 0 100px rgba(0,0,0,0.5),
-                0 10px 40px rgba(0,0,0,0.8);
-        }
-        
-        .game-board::before {
-            content: "";
-            position: absolute;
-            top: 10px; left: 10px; right: 10px; bottom: 10px;
-            border: 2px dashed rgba(212,175,55,0.3);
-            border-radius: 10px;
-            pointer-events: none;
-        }
-        
-        /* Wood grain effect */
-        .wood-rim {
-            background: linear-gradient(90deg, var(--wood) 0%, var(--wood-light) 50%, var(--wood) 100%);
-            padding: 8px;
-            border-radius: 25px;
-            margin: -8px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.5);
-        }
-        
-        .game-table {
-            position: relative;
-            width: 100%;
-            height: 380px;
-            background: radial-gradient(ellipse at center, rgba(45,107,86,0.6) 0%, rgba(27,77,62,0.3) 60%, transparent 100%);
-            border-radius: 50% / 30%;
-            border: 3px solid rgba(212,175,55,0.3);
-            margin: 10px 0;
-            box-shadow: inset 0 0 50px rgba(0,0,0,0.3);
-        }
-        
-        /* Player Positions */
-        .player-position {
-            position: absolute;
-            text-align: center;
-            transition: all 0.3s;
-            padding: 8px;
-            border-radius: 12px;
-            background: rgba(0,0,0,0.4);
-            border: 2px solid transparent;
-            min-width: 80px;
-        }
-        
-        .player-position.active {
-            transform: scale(1.1);
-            z-index: 10;
-            background: rgba(212,175,55,0.2);
-            border: 2px solid var(--gold);
-            box-shadow: 0 0 20px rgba(212,175,55,0.4);
-        }
-        
-        .player-position.top { top: 2%; left: 50%; transform: translateX(-50%); }
-        .player-position.right { top: 50%; right: 2%; transform: translateY(-50%); }
-        .player-position.bottom { bottom: 2%; left: 50%; transform: translateX(-50%); }
-        .player-position.left { top: 50%; left: 2%; transform: translateY(-50%); }
-        
-        .player-avatar {
-            width: 45px;
-            height: 45px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, var(--albanian-red) 0%, #8b0000 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.3rem;
-            margin: 0 auto 5px;
-            border: 3px solid var(--gold);
-            box-shadow: 0 0 10px rgba(0,0,0,0.5);
-        }
-        
-        .player-avatar.bot {
-            background: linear-gradient(135deg, #444 0%, #222 100%);
-            border-color: #666;
-        }
-        
-        .player-name {
-            font-size: 0.8rem;
-            font-weight: 700;
-            color: var(--gold-light);
-            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
-            white-space: nowrap;
-            font-family: 'Cinzel', serif;
-        }
-        
-        .player-cards-count {
-            font-size: 0.7rem;
-            color: var(--gold);
-            opacity: 0.9;
-            background: rgba(0,0,0,0.5);
-            padding: 2px 8px;
-            border-radius: 10px;
-            margin-top: 4px;
-            display: inline-block;
-        }
-        
-        /* Cards - Poker Style */
-        .card {
-            width: 65px;
-            height: 95px;
-            background: white;
+            border: none;
             border-radius: 8px;
-            position: relative;
-            display: inline-flex;
-            flex-direction: column;
-            justify-content: space-between;
-            padding: 6px;
-            margin: 2px;
+            font-weight: 700;
+            font-size: 1rem;
             cursor: pointer;
-            transition: all 0.2s;
-            box-shadow: 0 3px 10px rgba(0,0,0,0.4), 0 1px 3px rgba(0,0,0,0.2);
-            font-weight: 700;
-            user-select: none;
-            font-size: 0.9rem;
-            border: 1px solid #ddd;
+            transition: 0.2s;
         }
-        
-        .card:hover {
-            transform: translateY(-15px) scale(1.05);
-            box-shadow: 0 15px 30px rgba(0,0,0,0.6);
-            z-index: 100;
+        .access-btn:hover {
+            background: #ff5588;
+            transform: translateY(-2px);
         }
-        
-        .card.selected {
-            transform: translateY(-25px) scale(1.1);
-            box-shadow: 0 0 25px var(--gold), 0 10px 20px rgba(0,0,0,0.4);
-            border: 2px solid var(--gold);
-            z-index: 101;
-        }
-        
-        .card.red { color: var(--albanian-red); }
-        .card.black { color: #1a1a1a; }
-        
-        .card-back {
-            background: 
-                linear-gradient(135deg, #8b0000 0%, var(--albanian-red) 50%, #8b0000 100%),
-                repeating-linear-gradient(45deg, transparent, transparent 5px, rgba(0,0,0,.1) 5px, rgba(0,0,0,.1) 10px);
-            border: 2px solid var(--gold);
-        }
-        
-        .card-back::after {
-            content: "🦅";
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 2rem;
-            opacity: 0.8;
-            filter: drop-shadow(0 0 5px rgba(0,0,0,0.5));
-        }
-        
-        .hand {
-            display: flex;
-            justify-content: center;
-            flex-wrap: wrap;
-            gap: -20px;
-            margin: 15px 0;
-            perspective: 1000px;
-            min-height: 110px;
-            padding: 10px;
-            background: rgba(0,0,0,0.2);
-            border-radius: 15px;
-            border: 1px solid rgba(212,175,55,0.2);
-        }
-        
-        .hand .card {
-            margin-left: -20px;
-        }
-        
-        .hand .card:first-child {
-            margin-left: 0;
-        }
-        
-        /* Table Center */
-        .table-pile {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 8px;
-            width: 90%;
-            z-index: 5;
-        }
-        
-        .current-trick {
-            display: flex;
-            gap: 8px;
-            min-height: 95px;
-            align-items: center;
-            justify-content: center;
-            padding: 15px;
-            background: rgba(0,0,0,0.4);
-            border-radius: 15px;
-            border: 2px solid var(--gold);
-            flex-wrap: wrap;
-            max-width: 100%;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.5);
-            min-width: 200px;
-        }
-        
-        .trick-label {
-            color: var(--gold);
-            font-weight: 700;
-            font-size: 1rem;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
-            background: rgba(0,0,0,0.5);
-            padding: 5px 15px;
-            border-radius: 20px;
-            border: 1px solid var(--gold-dark);
-        }
-        
-        /* Controls */
-        .controls {
-            display: flex;
-            justify-content: center;
-            gap: 12px;
-            margin: 15px 0;
-            flex-wrap: wrap;
-        }
-        
-        .game-info {
+        .access-alt {
             text-align: center;
-            padding: 12px;
-            background: rgba(0,0,0,0.5);
-            border-radius: 12px;
-            border: 1px solid var(--gold-dark);
-            margin-bottom: 15px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-        }
-        
-        .turn-indicator {
-            font-size: 1.1rem;
-            color: var(--gold);
-            font-weight: 700;
-            animation: pulse 2s infinite;
-            font-family: 'Cinzel', serif;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-        
-        @keyframes pulse {
-            0%, 100% { opacity: 1; text-shadow: 0 0 10px rgba(212,175,55,0.5); }
-            50% { opacity: 0.7; text-shadow: 0 0 20px rgba(212,175,55,0.8); }
-        }
-        
-        .combination-hint {
-            background: rgba(212,175,55,0.15);
-            border: 1px solid var(--gold);
-            padding: 10px;
-            border-radius: 8px;
-            margin: 10px 0;
-            font-size: 0.9rem;
-            color: var(--gold-light);
-            font-style: italic;
-        }
-        
-        /* Lobby */
-        .lobby-container {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            max-width: 800px;
-            margin: 0 auto;
-        }
-        
-        .lobby-section {
-            background: rgba(255,255,255,0.05);
-            border: 2px solid var(--wood-light);
-            border-radius: 15px;
-            padding: 25px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
-        }
-        
-        .lobby-section h2 {
-            font-family: 'Cinzel', serif;
-            color: var(--gold);
-            margin-bottom: 20px;
-            text-align: center;
-            border-bottom: 2px solid var(--gold-dark);
-            padding-bottom: 10px;
-        }
-        
-        .input-group {
-            margin-bottom: 15px;
-        }
-        
-        .input-group label {
-            display: block;
-            margin-bottom: 5px;
-            color: var(--gold);
-            font-size: 0.9rem;
-            font-weight: 700;
-        }
-        
-        .input-group input, .input-group select {
-            width: 100%;
-            padding: 10px;
-            background: rgba(0,0,0,0.6);
-            border: 1px solid var(--gold-dark);
-            color: var(--gold-light);
-            border-radius: 8px;
-            font-size: 1rem;
-            font-family: 'Roboto', sans-serif;
-        }
-        
-        .checkbox-group {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 12px;
-            padding: 10px;
-            background: rgba(0,0,0,0.3);
-            border-radius: 8px;
-            border: 1px solid rgba(212,175,55,0.2);
-        }
-        
-        .checkbox-group input[type="checkbox"] {
-            width: 20px;
-            height: 20px;
-            accent-color: var(--gold);
-        }
-        
-        /* Rules */
-        .rules-content {
-            max-width: 800px;
-            margin: 0 auto;
-            background: rgba(255,255,255,0.05);
-            padding: 30px;
-            border-radius: 15px;
-            border: 2px solid var(--wood-light);
-            line-height: 1.8;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
-        }
-        
-        .rules-content h2 {
-            text-align: center;
-            font-family: 'Cinzel', serif;
-            color: var(--gold);
-            margin-bottom: 30px;
-            font-size: 2rem;
-            border-bottom: 3px solid var(--albanian-red);
-            display: inline-block;
-            padding-bottom: 10px;
-        }
-        
-        .rules-content h3 {
-            color: var(--gold);
-            font-family: 'Cinzel', serif;
-            margin: 25px 0 10px;
-            border-left: 4px solid var(--albanian-red);
-            padding-left: 10px;
-        }
-        
-        .highlight {
-            color: var(--gold);
-            font-weight: 700;
-        }
-        
-        .special-card {
-            background: rgba(196,30,58,0.2);
-            border-left: 3px solid var(--albanian-red);
-            padding: 10px;
-            margin: 10px 0;
-            border-radius: 0 8px 8px 0;
-        }
-        
-        /* Modal */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.9);
-            z-index: 2000;
-            justify-content: center;
-            align-items: center;
-            backdrop-filter: blur(5px);
-        }
-        
-        .modal.active {
-            display: flex;
-        }
-        
-        .modal-content {
-            background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%);
-            border: 3px solid var(--gold);
-            border-radius: 20px;
-            padding: 30px;
-            max-width: 600px;
-            width: 90%;
-            max-height: 80vh;
-            overflow-y: auto;
-            box-shadow: 0 0 50px rgba(212,175,55,0.3);
-        }
-        
-        .modal-title {
-            font-family: 'Cinzel', serif;
-            font-size: 1.8rem;
-            color: var(--gold);
-            margin-bottom: 20px;
-            text-align: center;
-            border-bottom: 2px solid var(--gold-dark);
-            padding-bottom: 15px;
-        }
-        
-        .help-section {
-            background: rgba(255,255,255,0.05);
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 15px;
-            border: 1px solid rgba(212,175,55,0.3);
-        }
-        
-        .help-title {
-            color: var(--gold);
-            font-weight: 700;
-            margin-bottom: 10px;
-            font-family: 'Cinzel', serif;
-        }
-        
-        .move-list {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-top: 10px;
-        }
-        
-        .move-tag {
-            background: rgba(212,175,55,0.2);
-            border: 1px solid var(--gold);
-            padding: 5px 10px;
-            border-radius: 15px;
+            margin-top: 20px;
+            color: var(--text-dim);
             font-size: 0.85rem;
-            color: var(--gold-light);
         }
-        
-        /* Animations */
-        .burn-effect {
-            animation: burnAnimation 1.2s ease-out forwards;
+        .access-alt a {
+            color: var(--cyan);
+            text-decoration: none;
+            cursor: pointer;
         }
-        
-        @keyframes burnAnimation {
-            0% { transform: scale(1); opacity: 1; filter: brightness(1); }
-            30% { transform: scale(1.1); filter: brightness(3) sepia(1) hue-rotate(-50deg) saturate(5); }
-            100% { transform: scale(0); opacity: 0; }
+
+        /* MAP POPUPS */
+        .leaflet-popup-content-wrapper {
+            background: var(--bg-panel);
+            color: var(--text);
+            border: 1px solid var(--cyan);
+            border-radius: 8px;
         }
-        
-        .swap-animation {
-            animation: swapPulse 1.5s ease-in-out;
+        .leaflet-popup-tip {
+            background: var(--cyan);
         }
-        
-        @keyframes swapPulse {
-            0%, 100% { box-shadow: 0 0 0 rgba(212,175,55,0); border-color: transparent; }
-            50% { box-shadow: 0 0 40px rgba(212,175,55,0.8); border-color: var(--gold); background: rgba(212,175,55,0.3); }
+        .intel-popup-title {
+            color: var(--cyan);
+            font-weight: 700;
+            margin-bottom: 5px;
         }
-        
-        .deal-animation {
-            animation: dealCard 0.5s ease-out;
+        .intel-popup-meta {
+            color: var(--text-dim);
+            font-size: 0.8rem;
+            margin-bottom: 8px;
         }
-        
-        @keyframes dealCard {
-            from { transform: translateY(-100px) rotate(180deg); opacity: 0; }
-            to { transform: translateY(0) rotate(0); opacity: 1; }
+        .intel-popup-confidence {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            margin-top: 5px;
         }
-        
-        /* Responsive */
+        .confidence-high { background: rgba(0,255,136,0.2); color: var(--green); }
+        .confidence-med { background: rgba(255,136,0,0.2); color: var(--orange); }
+        .confidence-low { background: rgba(255,51,102,0.2); color: var(--red); }
+
+        /* OVERLAY INFO */
+        .overlay-info {
+            position: absolute;
+            background: var(--bg-panel);
+            border: 1px solid var(--cyan);
+            border-radius: 12px;
+            padding: 20px;
+            min-width: 300px;
+            max-width: 400px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+            z-index: 2500;
+            display: none;
+            backdrop-filter: blur(10px);
+        }
+        .overlay-info.active {
+            display: block;
+            animation: slideIn 0.3s ease-out;
+        }
+
         @media (max-width: 768px) {
-            .logo { font-size: 1.6rem; }
-            .lobby-container { grid-template-columns: 1fr; }
-            .card { width: 50px; height: 75px; font-size: 0.75rem; }
-            .game-table { height: 320px; }
-            .player-avatar { width: 35px; height: 35px; font-size: 1rem; }
-            .hand .card { margin-left: -15px; }
-            .btn-help { width: 45px; height: 45px; font-size: 1.2rem; bottom: 10px; right: 10px; }
+            .telegram-panel { width: 100%; right: -100%; }
+            .radio-zone-info { display: none; }
+            .watermark { font-size: 4rem; }
         }
-        
-        /* Scrollbar */
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.3); }
-        ::-webkit-scrollbar-thumb { background: var(--gold-dark); border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: var(--gold); }
     </style>
 </head>
 <body>
-    <div class="watermark">
-        ராஜ்<br>சுவாதி
-    </div>
 
-    <header class="header">
-        <div class="logo">MURLAN</div>
-        <div class="subtitle">Das legendäre albanische Kartenspiel</div>
-    </header>
+    <div class="watermark">WARMAP 2026</div>
 
-    <nav class="nav-tabs">
-        <button class="nav-tab active" onclick="showScreen('menu')">Menü</button>
-        <button class="nav-tab" onclick="showScreen('local')">Lokal</button>
-        <button class="nav-tab" onclick="showScreen('rules')">Regeln</button>
-    </nav>
+    <!-- RADIO BAR -->
+    <div class="radio-bar">
+        <div class="radio-status">
+            <div class="live-dot" id="liveDot"></div>
+            <span id="radioStatusText">STANDBY</span>
+        </div>
+        
+        <div class="radio-zone-info">
+            <div id="currentZoneDisplay">UTC+00:00 LONDON</div>
+            <div class="radio-zone-name" id="nextBroadcastTime">Nächste Ausgabe: --:--</div>
+        </div>
 
-    <main>
-        <!-- Menu -->
-        <section id="menu" class="screen active">
-            <div style="text-align: center; padding: 30px 20px;">
-                <div style="font-size: 4rem; margin-bottom: 20px;">🦅</div>
-                <h1 style="font-family: 'Cinzel', serif; font-size: 2rem; margin-bottom: 20px; color: var(--gold);">Willkommen am Tisch</h1>
-                <p style="font-size: 1.1rem; max-width: 600px; margin: 0 auto 30px; line-height: 1.6; opacity: 0.9;">
-                    Das strategische Kartenspiel aus Albanien. Spiele wie an einem echten Pokertisch 
-                    mit bis zu 4 Spielern. Wer als Erster alle Karten loswird, gewinnt!
-                </p>
-                <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
-                    <button class="btn" onclick="showScreen('local')">Spiel starten</button>
-                    <button class="btn btn-secondary" onclick="showScreen('rules')">Anleitung</button>
-                </div>
-            </div>
-        </section>
-
-        <!-- Local Game Setup -->
-        <section id="local" class="screen">
-            <div style="max-width: 600px; margin: 0 auto;">
-                <h2 style="font-family: 'Cinzel', serif; color: var(--gold); margin-bottom: 25px; text-align: center;">Spieler auswählen</h2>
-                
-                <div class="lobby-section" style="background: rgba(27,77,62,0.3); border-color: var(--felt-light);">
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="p1" checked disabled>
-                        <label for="p1" style="flex: 1;"><strong>Du</strong> (Spieler 1)</label>
-                        <span style="color: var(--gold);">👤</span>
-                    </div>
-                    
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="p2" checked onchange="togglePlayer(2)">
-                        <label for="p2" style="flex: 1;">Spieler 2</label>
-                        <select id="p2Type" style="width: auto; padding: 5px;">
-                            <option value="bot">🤖 KI</option>
-                            <option value="human">👤 Mensch</option>
-                        </select>
-                    </div>
-                    
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="p3" onchange="togglePlayer(3)">
-                        <label for="p3" style="flex: 1;">Spieler 3</label>
-                        <select id="p3Type" style="width: auto; padding: 5px;">
-                            <option value="bot">🤖 KI</option>
-                            <option value="human">👤 Mensch</option>
-                        </select>
-                    </div>
-                    
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="p4" onchange="togglePlayer(4)">
-                        <label for="p4" style="flex: 1;">Spieler 4</label>
-                        <select id="p4Type" style="width: auto; padding: 5px;">
-                            <option value="bot">🤖 KI</option>
-                            <option value="human">👤 Mensch</option>
-                        </select>
-                    </div>
-                    
-                    <button class="btn" onclick="startLocalGame()" style="width: 100%; margin-top: 20px; padding: 15px;">Spiel starten</button>
-                </div>
-            </div>
-        </section>
-
-        <!-- Rules -->
-        <section id="rules" class="screen">
-            <div class="rules-content">
-                <div style="text-align: center;">
-                    <div style="font-size: 3rem; margin-bottom: 10px;">🦅</div>
-                    <h2>MURLAN - SPIELREGELN</h2>
-                </div>
-                
-                <h3>Spielziel</h3>
-                <p>Sei der erste Spieler, der alle 13 Karten loswird.</p>
-                
-                <h3>Kartenhierarchie</h3>
-                <div class="special-card">
-                    <strong class="highlight">2 (Zweier):</strong> Die höchste Karte. Schlägt alles außer eine andere 2. Beendet den Stich sofort.
-                </div>
-                <div class="special-card">
-                    <strong class="highlight">3 (Dreier):</strong> Tausche nach dem Spielen deine restlichen Karten mit dem nächsten Spieler!
-                </div>
-                <ul>
-                    <li><strong>Ass (A):</strong> 15 Punkte</li>
-                    <li><strong>König (K), Dame (Q), Bube (J):</strong> 10 Punkte</li>
-                    <li><strong>10-4:</strong> Nennwert</li>
-                </ul>
-                
-                <h3>Gültige Kombinationen</h3>
-                <ul>
-                    <li><strong>Einzelkarte:</strong> Eine beliebige Karte</li>
-                    <li><strong>Paar:</strong> Zwei gleiche Werte (z.B. 7♥ 7♠)</li>
-                    <li><strong>Drilling:</strong> Drei gleiche Werte</li>
-                    <li><strong>Vierling (BURN):</strong> Vier gleiche Werte - verbrennt den Stapel!</li>
-                    <li><strong>Straße:</strong> 3-5 aufeinanderfolgende Werte (Farbe egal)</li>
-                </ul>
-                
-                <h3>Spielablauf</h3>
-                <ol>
-                    <li>Der Spieler mit ♣4 beginnt</li>
-                    <li>Du musst den <strong>gleichen Typ</strong> spielen (z.B. auf ein Paar ein höheres Paar)</li>
-                    <li>Wer den Stich gewinnt, beginnt die nächste Runde frei</li>
-                    <li><strong>Passen:</strong> Nur erlaubt, wenn du nicht der Erste bist</li>
-                </ol>
-                
-                <h3>Sonderregeln</h3>
-                <p><strong>Burn:</strong> Ein Vierling löscht den Stapel. Der Spieler darf neu anfangen.<br>
-                <strong>Die 2:</strong> Gewinnt jeden Stich sofort (außer gegen eine andere 2).<br>
-                <strong>Die 3:</strong> Nach dem Spielen werden die Hände getauscht!</p>
-            </div>
-        </section>
-
-        <!-- Game Screen -->
-        <section id="game" class="screen">
-            <div class="wood-rim">
-                <div class="game-board">
-                    <div class="game-info">
-                        <div id="turnIndicator" class="turn-indicator">Bereite Spiel vor...</div>
-                        <div id="combinationHint" class="combination-hint" style="display: none;"></div>
-                    </div>
-                    
-                    <div class="game-table" id="gameTable">
-                        <!-- Player Positions (0=bottom/you, 1=left, 2=top, 3=right) -->
-                        <div class="player-position top" id="pos2">
-                            <div class="player-avatar bot">🤖</div>
-                            <div class="player-name">Spieler 3</div>
-                            <div class="player-cards-count">13 Karten</div>
-                        </div>
-                        
-                        <div class="player-position right" id="pos3">
-                            <div class="player-avatar bot">🤖</div>
-                            <div class="player-name">Spieler 4</div>
-                            <div class="player-cards-count">13 Karten</div>
-                        </div>
-                        
-                        <div class="player-position bottom" id="pos0">
-                            <div class="player-avatar">👤</div>
-                            <div class="player-name">Du</div>
-                            <div class="player-cards-count">13 Karten</div>
-                        </div>
-                        
-                        <div class="player-position left" id="pos1">
-                            <div class="player-avatar bot">🤖</div>
-                            <div class="player-name">Spieler 2</div>
-                            <div class="player-cards-count">13 Karten</div>
-                        </div>
-                        
-                        <div class="table-pile">
-                            <div class="trick-label" id="trickType">Neue Runde</div>
-                            <div class="current-trick" id="currentTrick">
-                                <div style="color: var(--gold-dark); font-style: italic; font-size: 0.9rem;">Warte auf ersten Zug...</div>
-                            </div>
-                            <div style="color: var(--gold-light); font-size: 0.85rem; min-height: 20px; text-shadow: 0 2px 4px rgba(0,0,0,0.8);" id="lastAction"></div>
-                        </div>
-                    </div>
-                    
-                    <div class="hand" id="playerHand"></div>
-                    
-                    <div class="controls">
-                        <button class="btn" onclick="playSelected()" id="playBtn" disabled>Spielen</button>
-                        <button class="btn btn-secondary" onclick="passTurn()" id="passBtn" disabled>Passen</button>
-                        <button class="btn btn-danger" onclick="leaveGame()">Aufgeben</button>
-                    </div>
-                </div>
-            </div>
-        </section>
-    </main>
-
-    <!-- Help Button -->
-    <button class="btn btn-help" onclick="showHelp()" title="Hilfe">?</button>
-
-    <!-- Help Modal -->
-    <div class="modal" id="helpModal">
-        <div class="modal-content">
-            <div class="modal-title>🎮 Spielhilfe</div>
-            
-            <div class="help-section">
-                <div class="help-title">Aktuelle Situation</div>
-                <div id="helpSituation" style="margin-bottom: 10px;"></div>
-                <div id="helpRequired" style="color: var(--gold); font-weight: bold;"></div>
-            </div>
-            
-            <div class="help-section">
-                <div class="help-title">Deine möglichen Züge</div>
-                <div id="helpMoves" class="move-list"></div>
-            </div>
-            
-            <div class="help-section">
-                <div class="help-title">Schnellübersicht</div>
-                <ul style="margin-left: 20px; font-size: 0.9rem;">
-                    <li><strong>2:</strong> Höchste Karte, gewinnt sofort</li>
-                    <li><strong>3:</strong> Tauscht Hände mit nächstem Spieler</li>
-                    <li><strong>4 gleiche:</strong> Burn - löscht den Stapel</li>
-                    <li><strong>Straße:</strong> 3+ aufeinanderfolgende Zahlen</li>
-                </ul>
-            </div>
-            
-            <button class="btn" onclick="closeModal('helpModal')" style="width: 100%; margin-top: 10px;">Schließen</button>
+        <div style="margin-left:auto; display:flex; gap:15px; align-items:center;">
+            <button onclick="toggleRadio()" class="fab" style="position:static; width:40px; height:40px; font-size:1rem;">
+                <i class="fas fa-play" id="playIcon"></i>
+            </button>
         </div>
     </div>
 
-    <!-- Winner Modal -->
-    <div class="modal" id="winnerModal">
-        <div class="modal-content">
-            <div style="font-size: 4rem; margin-bottom: 10px;">🏆</div>
-            <div class="modal-title">Runde beendet!</div>
-            <div id="winnerName" style="font-size: 1.4rem; margin-bottom: 20px; color: var(--gold); font-family: 'Cinzel', serif;"></div>
-            <div id="winnerStats" style="margin-bottom: 25px;"></div>
-            <div style="display: flex; gap: 10px;">
-                <button class="btn" onclick="closeModal('winnerModal'); showScreen('menu')" style="flex: 1;">Menü</button>
-                <button class="btn btn-secondary" onclick="closeModal('winnerModal'); startLocalGame()" style="flex: 1;">Neues Spiel</button>
+    <!-- MAP -->
+    <div id="map"></div>
+
+    <!-- TICKER -->
+    <div class="ticker">
+        <div id="ticker-content" class="ticker-content">
+            <span class="ticker-item">System initialisiert...</span>
+        </div>
+    </div>
+
+    <!-- TELEGRAM PANEL -->
+    <div class="telegram-panel" id="telegramPanel">
+        <div class="tg-header">
+            <div class="tg-title">
+                <i class="fab fa-telegram"></i>
+                INTEL SUBMISSION
+            </div>
+            <div class="tg-close" onclick="toggleTelegramPanel()">
+                <i class="fas fa-times"></i>
+            </div>
+        </div>
+
+        <div class="tg-section">
+            <div class="tg-section-title">Bot Status</div>
+            <div class="tg-bot-status">
+                <div class="tg-status-dot"></div>
+                <span>@WarmapIntelBot online</span>
+            </div>
+            <div style="margin-top:8px; font-size:0.8rem; color:var(--text-dim);">
+                Sende Codes via /start auth
+            </div>
+        </div>
+
+        <div class="tg-section">
+            <div class="tg-section-title">Direkteingabe (Simulation)</div>
+            <textarea id="intelInput" class="tg-input" placeholder="Beschreibe den Vorfall... (z.B. 'Raketenangriff auf Kiew, 50.4501, 30.5234')"></textarea>
+            <button onclick="submitIntel()" class="tg-btn" id="submitBtn">
+                <i class="fas fa-robot" style="margin-right:8px;"></i>
+                An KI senden & veröffentlichen
+            </button>
+        </div>
+
+        <div class="tg-section">
+            <div class="tg-section-title">Letzte Eingänge</div>
+            <div class="tg-inbox" id="tgInbox">
+                <div class="tg-message">
+                    <div>System bereit für Eingaben...</div>
+                    <div class="tg-message-time">Jetzt</div>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Error Modal -->
-    <div class="modal" id="errorModal">
+    <!-- FAB BUTTONS -->
+    <div class="fab-container">
+        <div class="fab alert" onclick="simulateIncomingIntel()" title="Test-Alarm">
+            <i class="fas fa-bell"></i>
+        </div>
+        <div class="fab" onclick="toggleTelegramPanel()" title="Telegram Panel">
+            <i class="fab fa-telegram"></i>
+        </div>
+        <div class="fab" onclick="downloadIntel()" title="JSON Export">
+            <i class="fas fa-download"></i>
+        </div>
+        <div class="fab" onclick="map.flyTo([35, 20], 3)" title="Reset View">
+            <i class="fas fa-globe"></i>
+        </div>
+    </div>
+
+    <!-- ACCESS MODAL -->
+    <div class="modal" id="accessModal" style="display:flex;">
         <div class="modal-content">
-            <div class="modal-title" style="color: var(--albanian-red);">⚠️ Fehler</div>
-            <p id="errorMessage" style="margin-bottom: 20px; line-height: 1.6;"></p>
-            <button class="btn" onclick="closeModal('errorModal')" style="width: 100%;">Verstanden</button>
+            <div class="modal-title">
+                <i class="fas fa-shield-alt" style="margin-right:10px;"></i>
+                SECURE ACCESS
+            </div>
+            <div class="modal-text">
+                WarMap Intelligence Radio erfordert Autorisierung.<br>
+                Gib deinen Einladungscode ein oder verbinde Telegram.
+            </div>
+            <input type="text" id="inviteCode" class="code-input" placeholder="INTEL-2026" maxlength="12">
+            <button onclick="checkAccess()" class="access-btn">ZUGANG FREISCHALTEN</button>
+            <div class="access-alt">
+                <a onclick="requestTelegramCode()">Code via Telegram anfordern</a>
+            </div>
         </div>
     </div>
 
     <script>
-        // Game State
-        let gameState = {
-            players: [],
-            currentPlayer: 0,
-            hands: [],
-            currentTrick: [],
-            trickType: null,
-            trickLeader: 0,
-            lastWinner: 0,
-            selectedCards: [],
-            gameStarted: false,
-            consecutivePasses: 0,
-            deck: [],
-            firstPlay: true
+        // ================== KONFIGURATION ==================
+        // HINWEIS: In Produktion diese Keys niemals im Frontend exposen!
+        // Dies ist eine Demo-Implementierung. Für echte Nutzung Backend verwenden.
+        const CONFIG = {
+            TELEGRAM_BOT_TOKEN: "8614514552:AAE35YfEofSZ69Gdxe6qSJp5Qj0QtCcQx7I",
+            GEMINI_KEY: "AIzaSyCBN0NFVJSD8JsLdbI-8bfUM5xtHjJRQNk",
+            INVITE_CODES: ["INTEL-2026", "SWATHI-2026", "WARMAP-001"]
         };
 
-        // Card definitions
-        const suits = ['♥', '♦', '♣', '♠'];
-        const ranks = [
-            {value: 2, label: '2', points: 20, name: 'Zwei'},
-            {value: 3, label: '3', points: 0, name: 'Drei', special: 'swap'},
-            {value: 4, label: '4', points: 4, name: 'Vier'},
-            {value: 5, label: '5', points: 5, name: 'Fünf'},
-            {value: 6, label: '6', points: 6, name: 'Sechs'},
-            {value: 7, label: '7', points: 7, name: 'Sieben'},
-            {value: 8, label: '8', points: 8, name: 'Acht'},
-            {value: 9, label: '9', points: 9, name: 'Neun'},
-            {value: 10, label: '10', points: 10, name: 'Zehn'},
-            {value: 11, label: 'J', points: 10, name: 'Bube'},
-            {value: 12, label: 'Q', points: 10, name: 'Dame'},
-            {value: 13, label: 'K', points: 10, name: 'König'},
-            {value: 14, label: 'A', points: 15, name: 'Ass'}
+        // ================== ZEITZONEN FÜR RADIO ==================
+        const TIMEZONES = [
+            { zone: "UTC-12", city: "Baker Island", offset: -12, region: "Pazifik" },
+            { zone: "UTC-11", city: "Pago Pago", offset: -11, region: "Samoa" },
+            { zone: "UTC-10", city: "Honolulu", offset: -10, region: "Hawaii" },
+            { zone: "UTC-9", city: "Anchorage", offset: -9, region: "Alaska" },
+            { zone: "UTC-8", city: "Los Angeles", offset: -8, region: "Westküste USA" },
+            { zone: "UTC-7", city: "Denver", offset: -7, region: "Rocky Mountains" },
+            { zone: "UTC-6", city: "Chicago", offset: -6, region: "Midwest USA" },
+            { zone: "UTC-5", city: "New York", offset: -5, region: "Ostküste USA" },
+            { zone: "UTC-4", city: "Caracas", offset: -4, region: "Venezuela" },
+            { zone: "UTC-3", city: "Buenos Aires", offset: -3, region: "Argentinien" },
+            { zone: "UTC-2", city: "South Georgia", offset: -2, region: "Atlantik" },
+            { zone: "UTC-1", city: "Azores", offset: -1, region: "Portugal" },
+            { zone: "UTC+0", city: "London", offset: 0, region: "UK" },
+            { zone: "UTC+1", city: "Berlin", offset: 1, region: "Mitteleuropa" },
+            { zone: "UTC+2", city: "Kairo", offset: 2, region: "Ägypten" },
+            { zone: "UTC+3", city: "Moskau", offset: 3, region: "Russland" },
+            { zone: "UTC+4", city: "Dubai", offset: 4, region: "VAE" },
+            { zone: "UTC+5", city: "Karachi", offset: 5, region: "Pakistan" },
+            { zone: "UTC+6", city: "Dhaka", offset: 6, region: "Bangladesh" },
+            { zone: "UTC+7", city: "Bangkok", offset: 7, region: "Thailand" },
+            { zone: "UTC+8", city: "Peking", offset: 8, region: "China" },
+            { zone: "UTC+9", city: "Tokio", offset: 9, region: "Japan" },
+            { zone: "UTC+10", city: "Sydney", offset: 10, region: "Australien" },
+            { zone: "UTC+11", city: "Noumea", offset: 11, region: "Neukaledonien" },
+            { zone: "UTC+12", city: "Auckland", offset: 12, region: "Neuseeland" }
         ];
 
-        function generateDeck() {
-            let deck = [];
-            for (let suit of suits) {
-                for (let rank of ranks) {
-                    deck.push({
-                        suit: suit,
-                        value: rank.value,
-                        label: rank.label,
-                        points: rank.points,
-                        special: rank.special || null,
-                        id: `${rank.label}_${suit}_${Math.random().toString(36).substr(2, 9)}`,
-                        name: `${rank.name} ${suit}`
-                    });
-                }
-            }
-            return shuffle(deck);
-        }
+        // ================== STATE ==================
+        let map;
+        let markers = [];
+        let intelDatabase = [];
+        let radioActive = false;
+        let currentZoneIndex = 12; // Start bei UTC+0
+        let speechSynthesis = window.speechSynthesis;
+        let autoBroadcastInterval;
+        let zoneRotationInterval;
 
-        function shuffle(array) {
-            for (let i = array.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [array[i], array[j]] = [array[j], array[i]];
-            }
-            return array;
-        }
-
-        function showScreen(screenId) {
-            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-            document.getElementById(screenId).classList.add('active');
+        // ================== INIT ==================
+        window.onload = function() {
+            initMap();
+            initRadio();
+            loadInitialData();
             
-            const tabs = ['menu', 'local', 'rules'];
-            const idx = tabs.indexOf(screenId);
-            if (idx >= 0) {
-                document.querySelectorAll('.nav-tab').forEach((t, i) => {
-                    t.classList.toggle('active', i === idx);
-                });
-            }
-        }
-
-        function togglePlayer(num) {
-            const checkbox = document.getElementById(`p${num}`);
-            const select = document.getElementById(`p${num}Type`);
-            select.disabled = !checkbox.checked;
-            select.style.opacity = checkbox.checked ? 1 : 0.5;
-        }
-
-        function startLocalGame() {
-            // Validate players
-            const count = [2,3,4].filter(n => document.getElementById(`p${n}`).checked).length + 1;
-            if (count < 2) {
-                showError('Mindestens 2 Spieler benötigt!');
-                return;
-            }
-
-            // Initialize
-            gameState.players = [{name: 'Du', type: 'human', id: 0}];
-            gameState.hands = [];
-            
-            if (document.getElementById('p2').checked) {
-                gameState.players.push({
-                    name: 'Spieler 2', 
-                    type: document.getElementById('p2Type').value, 
-                    id: 1
-                });
-            }
-            if (document.getElementById('p3').checked) {
-                gameState.players.push({
-                    name: 'Spieler 3', 
-                    type: document.getElementById('p3Type').value, 
-                    id: 2
-                });
-            }
-            if (document.getElementById('p4').checked) {
-                gameState.players.push({
-                    name: 'Spieler 4', 
-                    type: document.getElementById('p4Type').value, 
-                    id: 3
-                });
-            }
-
-            // Deal
-            gameState.deck = generateDeck();
-            for (let i = 0; i < gameState.players.length; i++) {
-                gameState.hands[i] = gameState.deck.splice(0, 13);
-                sortHand(gameState.hands[i]);
-            }
-            
-            // Find starter (4 of clubs)
-            gameState.currentPlayer = findStartingPlayer();
-            gameState.trickLeader = gameState.currentPlayer;
-            gameState.lastWinner = gameState.currentPlayer;
-            gameState.currentTrick = [];
-            gameState.trickType = null;
-            gameState.consecutivePasses = 0;
-            gameState.gameStarted = true;
-            gameState.firstPlay = true;
-            gameState.selectedCards = [];
-            
-            showScreen('game');
-            updateDisplay();
-            
-            // Log
-            setTimeout(() => {
-                logAction(`${gameState.players[gameState.currentPlayer].name} beginnt mit der Kreuz 4!`);
-                if (gameState.players[gameState.currentPlayer].type === 'bot') {
-                    setTimeout(botMove, 1500);
-                }
-            }, 500);
-        }
-
-        function findStartingPlayer() {
-            for (let i = 0; i < gameState.players.length; i++) {
-                if (gameState.hands[i].some(c => c.value === 4 && c.suit === '♣')) {
-                    return i;
-                }
-            }
-            return 0;
-        }
-
-        function sortHand(hand) {
-            hand.sort((a, b) => a.value - b.value);
-        }
-
-        function updateDisplay() {
-            // Update player positions
-            const positions = ['bottom', 'left', 'top', 'right'];
-            for (let i = 0; i < 4; i++) {
-                const el = document.getElementById(`pos${i}`);
-                if (i < gameState.players.length) {
-                    el.style.display = 'block';
-                    el.className = `player-position ${positions[i]} ${i === gameState.currentPlayer ? 'active' : ''}`;
-                    el.querySelector('.player-name').textContent = gameState.players[i].name;
-                    el.querySelector('.player-avatar').textContent = gameState.players[i].type === 'bot' ? '🤖' : '👤';
-                    el.querySelector('.player-avatar').className = `player-avatar ${gameState.players[i].type === 'bot' ? 'bot' : ''}`;
-                    el.querySelector('.player-cards-count').textContent = `${gameState.hands[i].length} Karten`;
-                } else {
-                    el.style.display = 'none';
-                }
-            }
-
-            // Update trick
-            const trickEl = document.getElementById('currentTrick');
-            const typeEl = document.getElementById('trickType');
-            
-            if (gameState.currentTrick.length === 0) {
-                trickEl.innerHTML = '<div style="color: var(--gold-dark); font-style: italic; font-size: 0.9rem;">Neue Runde - freie Auswahl</div>';
-                typeEl.textContent = 'Neue Runde';
+            // Access Check
+            if (!localStorage.getItem('warmap_access')) {
+                document.getElementById('accessModal').style.display = 'flex';
             } else {
-                trickEl.innerHTML = '';
-                gameState.currentTrick.forEach(card => {
-                    trickEl.appendChild(createCard(card, false));
+                document.getElementById('accessModal').style.display = 'none';
+                startRadio();
+            }
+        };
+
+        // ================== MAP ==================
+        function initMap() {
+            map = L.map('map', { zoomControl: true }).setView([30, 10], 2);
+            
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                attribution: '© OpenStreetMap | WarMap Intelligence',
+                opacity: 0.8
+            }).addTo(map);
+        }
+
+        function addIntelMarker(intel) {
+            const color = intel.confidence > 85 ? '#00ff88' : 
+                         intel.confidence > 60 ? '#ff8800' : '#ff3366';
+            
+            const marker = L.marker([intel.lat, intel.lng], {
+                icon: L.divIcon({
+                    className: 'intel-marker',
+                    html: `<div style="background:${color};width:16px;height:16px;border-radius:50%;border:2px solid white;box-shadow:0 0 10px ${color};animation:pulse 2s infinite;"></div>`,
+                    iconSize: [20,20]
+                })
+            }).addTo(map);
+
+            marker.bindPopup(`
+                <div class="intel-popup-title">${intel.title}</div>
+                <div class="intel-popup-meta">${intel.time} • ${intel.source || 'Telegram'}</div>
+                <div>${intel.summary}</div>
+                <div class="intel-popup-confidence confidence-${intel.confidence > 85 ? 'high' : intel.confidence > 60 ? 'med' : 'low'}">
+                    Vertrauen: ${intel.confidence}%
+                </div>
+            `);
+            
+            markers.push(marker);
+            
+            // Animation
+            gsap.from(marker.getElement(), {
+                scale: 0,
+                duration: 0.5,
+                ease: "back.out(1.7)"
+            });
+        }
+
+        // ================== RADIO SYSTEM ==================
+        function initRadio() {
+            updateZoneDisplay();
+            
+            // Jede Minute Zone aktualisieren (2.4 Min pro Zone für 24h Rundum)
+            zoneRotationInterval = setInterval(() => {
+                const minute = new Date().getUTCMinutes();
+                currentZoneIndex = Math.floor((minute / 2.4)) % 24;
+                updateZoneDisplay();
+            }, 60000);
+        }
+
+        function updateZoneDisplay() {
+            const zone = TIMEZONES[currentZoneIndex];
+            document.getElementById('currentZoneDisplay').textContent = 
+                `${zone.zone} ${zone.city.toUpperCase()}`;
+            
+            // Nächste Halbe/Volle Stunde berechnen
+            const now = new Date();
+            const nextBroadcast = new Date(now);
+            if (now.getUTCMinutes() < 30) {
+                nextBroadcast.setUTCMinutes(30, 0, 0);
+            } else {
+                nextBroadcast.setUTCHours(now.getUTCHours() + 1, 0, 0, 0);
+            }
+            const timeStr = nextBroadcast.toISOString().substr(11, 5);
+            document.getElementById('nextBroadcastTime').textContent = 
+                `Nächste Ausgabe: ${timeStr} UTC`;
+        }
+
+        function toggleRadio() {
+            radioActive = !radioActive;
+            const icon = document.getElementById('playIcon');
+            const dot = document.getElementById('liveDot');
+            const status = document.getElementById('radioStatusText');
+            
+            if (radioActive) {
+                icon.className = 'fas fa-pause';
+                dot.classList.add('broadcasting');
+                status.textContent = 'LIVE BROADCAST';
+                status.style.color = '#00ff88';
+                startRadio();
+            } else {
+                icon.className = 'fas fa-play';
+                dot.classList.remove('broadcasting');
+                status.textContent = 'STANDBY';
+                status.style.color = '';
+                stopRadio();
+            }
+        }
+
+        function startRadio() {
+            // Sofort erste Ansage
+            speakText("WarMap Intelligence Radio aktiviert. Globale Überwachung läuft.");
+            
+            // Prüfe alle 30 Sekunden auf :00 oder :30
+            autoBroadcastInterval = setInterval(() => {
+                checkBroadcastTime();
+            }, 30000);
+        }
+
+        function stopRadio() {
+            clearInterval(autoBroadcastInterval);
+            speechSynthesis.cancel();
+        }
+
+        function checkBroadcastTime() {
+            const now = new Date();
+            const minutes = now.getUTCMinutes();
+            const seconds = now.getUTCSeconds();
+            
+            // Sende bei :00 und :30
+            if ((minutes === 0 || minutes === 30) && seconds < 10) {
+                performBroadcast(minutes === 0 ? 'Hauptausgabe' : 'Update');
+            }
+        }
+
+        function performBroadcast(type) {
+            const zone = TIMEZONES[currentZoneIndex];
+            
+            // Relevante Intel für diese Zone filtern (letzte 30 Min)
+            const recentIntel = intelDatabase.filter(i => {
+                const age = Date.now() - i.timestamp;
+                return age < 1800000 && i.timezone === zone.offset;
+            });
+            
+            let text = `WarMap ${type}. Zeitzone ${zone.zone} ${zone.city}. `;
+            
+            if (recentIntel.length > 0) {
+                text += `${recentIntel.length} neue Ereignisse. `;
+                recentIntel.slice(0, 3).forEach((intel, idx) => {
+                    setTimeout(() => {
+                        speakText(`${intel.title}. ${intel.summary}`);
+                    }, 3000 + (idx * 4000));
                 });
+            } else {
+                text += "Keine neuen Ereignisse in dieser Region.";
+            }
+            
+            speakText(text);
+            
+            // Ticker Update
+            addToTicker(`[RADIO] ${type} aus ${zone.city} gesendet`, 'system');
+        }
+
+        function speakText(text) {
+            if (!speechSynthesis) return;
+            
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'de-DE';
+            utterance.rate = 0.95;
+            utterance.pitch = 0.85;
+            utterance.volume = 0.9;
+            
+            // Tiefe männliche Stimme suchen
+            const voices = speechSynthesis.getVoices();
+            const germanVoice = voices.find(v => v.lang.includes('de') && v.name.includes('Google')) || 
+                               voices.find(v => v.lang.includes('de'));
+            if (germanVoice) utterance.voice = germanVoice;
+            
+            speechSynthesis.speak(utterance);
+        }
+
+        // ================== KI / GEMINI INTEGRATION ==================
+        async function analyzeWithGemini(text) {
+            const btn = document.getElementById('submitBtn');
+            btn.classList.add('processing');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:8px;"></i> Analysiere...';
+            
+            try {
+                // Simuliere API Call (da CORS im Browser problematisch)
+                // In Produktion: Backend-Proxy verwenden!
                 
-                const names = {
-                    'single': 'Einzelkarte',
-                    'pair': 'Paar',
-                    'triple': 'Drilling',
-                    'quad': 'VIERLING!',
-                    'straight': 'Straße'
-                };
-                typeEl.textContent = names[gameState.trickType] || 'Kombination';
-            }
-
-            renderHand();
-        }
-
-        function createCard(card, selectable) {
-            const div = document.createElement('div');
-            const isRed = card.suit === '♥' || card.suit === '♦';
-            const isSelected = gameState.selectedCards.includes(card.id);
-            
-            div.className = `card ${isRed ? 'red' : 'black'} ${isSelected ? 'selected' : ''}`;
-            div.innerHTML = `
-                <div style="font-size: 0.9rem; align-self: flex-start;">${card.label}</div>
-                <div style="font-size: 1.6rem; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">${card.suit}</div>
-                <div style="font-size: 0.9rem; align-self: flex-end; transform: rotate(180deg);">${card.label}</div>
-            `;
-            
-            if (selectable && gameState.currentPlayer === 0 && gameState.players[0].type === 'human') {
-                div.onclick = () => selectCard(card);
-            }
-            
-            return div;
-        }
-
-        function renderHand() {
-            const container = document.getElementById('playerHand');
-            container.innerHTML = '';
-            
-            const isHumanTurn = gameState.currentPlayer === 0 && gameState.players[0].type === 'human';
-            
-            if (!isHumanTurn) {
-                // Show backs
-                const count = gameState.hands[gameState.currentPlayer].length;
-                for (let i = 0; i < count; i++) {
-                    const back = document.createElement('div');
-                    back.className = 'card card-back';
-                    container.appendChild(back);
-                }
-                document.getElementById('turnIndicator').innerHTML = `<span style="color: #fff;">${gameState.players[gameState.currentPlayer].name}</span> denkt...`;
-            } else {
-                // Show cards
-                gameState.hands[0].forEach(card => {
-                    container.appendChild(createCard(card, true));
-                });
-                document.getElementById('turnIndicator').textContent = 'Du bist am Zug!';
-            }
-            
-            updateButtons();
-            updateHint();
-        }
-
-        function selectCard(card) {
-            const idx = gameState.selectedCards.indexOf(card.id);
-            if (idx >= 0) {
-                gameState.selectedCards.splice(idx, 1);
-            } else {
-                // Validate selection logic (same value for groups, consecutive for straights)
-                const current = gameState.selectedCards.map(id => 
-                    gameState.hands[0].find(c => c.id === id)
-                );
+                await new Promise(r => setTimeout(r, 1500)); // Simuliere Verzögerung
                 
-                if (current.length === 0) {
-                    gameState.selectedCards.push(card.id);
-                } else {
-                    // Check if compatible
-                    const type = determineType([...current, card]);
-                    if (type || current.length === 0) {
-                        gameState.selectedCards.push(card.id);
-                    } else {
-                        // Replace selection if different type
-                        gameState.selectedCards = [card.id];
-                    }
-                }
-            }
-            renderHand();
-        }
-
-        function determineType(cards) {
-            if (cards.length === 0) return null;
-            if (cards.length === 1) return 'single';
-            
-            const values = cards.map(c => c.value).sort((a,b) => a-b);
-            const unique = [...new Set(values)];
-            
-            // Check pairs, triples, quads
-            if (cards.length === 2 && unique.length === 1) return 'pair';
-            if (cards.length === 3 && unique.length === 1) return 'triple';
-            if (cards.length === 4 && unique.length === 1) return 'quad';
-            
-            // Check straight (3+ consecutive)
-            if (cards.length >= 3) {
-                let isStraight = true;
-                for (let i = 1; i < values.length; i++) {
-                    if (values[i] !== values[i-1] + 1) {
-                        isStraight = false;
-                        break;
-                    }
-                }
-                if (isStraight) return 'straight';
-            }
-            
-            return null;
-        }
-
-        function isValidPlay(cards) {
-            if (cards.length === 0) return false;
-            
-            const type = determineType(cards);
-            if (!type) return false;
-            
-            // First play of game must include 4 of clubs
-            if (gameState.firstPlay) {
-                if (!cards.some(c => c.value === 4 && c.suit === '♣')) {
-                    return false;
-                }
-            }
-            
-            // If no trick type, anything valid is OK
-            if (!gameState.trickType) return true;
-            
-            // Must match type
-            if (type !== gameState.trickType) return false;
-            
-            // Must be higher
-            const currentHigh = Math.max(...gameState.currentTrick.map(c => c.value));
-            const newHigh = Math.max(...cards.map(c => c.value));
-            
-            // 2 beats everything except 2
-            const hasTwo = cards.some(c => c.value === 2);
-            const currentHasTwo = gameState.currentTrick.some(c => c.value === 2);
-            
-            if (hasTwo && !currentHasTwo) return true;
-            if (currentHasTwo) return hasTwo;
-            
-            return newHigh > currentHigh;
-        }
-
-        function updateButtons() {
-            const selected = gameState.selectedCards.map(id => 
-                gameState.hands[gameState.currentPlayer].find(c => c.id === id)
-            );
-            
-            const playBtn = document.getElementById('playBtn');
-            const passBtn = document.getElementById('passBtn');
-            
-            const valid = isValidPlay(selected);
-            playBtn.disabled = !valid;
-            
-            // Can pass if not leader and trick exists
-            const canPass = gameState.trickType !== null && gameState.currentPlayer !== gameState.trickLeader;
-            passBtn.disabled = !canPass;
-        }
-
-        function updateHint() {
-            const hint = document.getElementById('combinationHint');
-            const selected = gameState.selectedCards.map(id => 
-                gameState.hands[0].find(c => c.id === id)
-            );
-            
-            if (selected.length === 0) {
-                if (gameState.trickType) {
-                    const names = {
-                        'single': 'eine Einzelkarte',
-                        'pair': 'ein Paar',
-                        'triple': 'einen Drilling',
-                        'quad': 'einen Vierling',
-                        'straight': 'eine Straße'
-                    };
-                    hint.textContent = `Spiele ${names[gameState.trickType]} (höher als ${Math.max(...gameState.currentTrick.map(c => c.value))})`;
-                } else {
-                    hint.textContent = 'Wähle Karten zum Spielen (Einzel, Paar, Drilling, Straße...)';
-                }
-                hint.style.display = 'block';
-            } else {
-                const type = determineType(selected);
-                if (type) {
-                    const valid = isValidPlay(selected);
-                    hint.textContent = `${formatType(type)} ${valid ? '✓' : '✗ (nicht gültig)'}`;
-                    hint.style.color = valid ? 'var(--gold)' : 'var(--albanian-red)';
-                } else {
-                    hint.textContent = 'Ungültige Kombination';
-                    hint.style.color = 'var(--albanian-red)';
-                }
-                hint.style.display = 'block';
-            }
-        }
-
-        function formatType(type) {
-            const names = {
-                'single': 'Einzelkarte',
-                'pair': 'Paar',
-                'triple': 'Drilling',
-                'quad': 'VIERLING (Burn!)',
-                'straight': 'Straße'
-            };
-            return names[type] || type;
-        }
-
-        function playSelected() {
-            const cards = gameState.selectedCards.map(id => 
-                gameState.hands[gameState.currentPlayer].find(c => c.id === id)
-            );
-            
-            if (!isValidPlay(cards)) return;
-            
-            const playerIdx = gameState.currentPlayer;
-            const playerName = gameState.players[playerIdx].name;
-            const type = determineType(cards);
-            
-            // Remove from hand
-            gameState.hands[playerIdx] = gameState.hands[playerIdx].filter(c => 
-                !gameState.selectedCards.includes(c.id)
-            );
-            
-            // Handle special cards
-            if (type === 'quad') {
-                handleBurn(cards, playerName);
-                return;
-            }
-            
-            if (cards.some(c => c.value === 2)) {
-                handleTwo(cards, playerName);
-                return;
-            }
-            
-            if (cards.some(c => c.value === 3)) {
-                handleThree(playerIdx);
-            }
-            
-            // Normal play
-            gameState.currentTrick = cards;
-            gameState.trickType = type;
-            gameState.firstPlay = false;
-            
-            if (gameState.trickLeader === null) {
-                gameState.trickLeader = playerIdx;
-            }
-            
-            logAction(`${playerName} spielt ${formatCards(cards)}`);
-            
-            gameState.selectedCards = [];
-            gameState.consecutivePasses = 0;
-            
-            if (checkWin()) return;
-            
-            nextTurn();
-        }
-
-        function handleBurn(cards, playerName) {
-            const trickEl = document.getElementById('currentTrick');
-            trickEl.classList.add('burn-effect');
-            
-            logAction(`${playerName} spielt einen VIERLING! 🔥 BURN!`, true);
-            
-            setTimeout(() => {
-                gameState.currentTrick = [];
-                gameState.trickType = null;
-                gameState.trickLeader = gameState.currentPlayer;
-                gameState.firstPlay = false;
-                gameState.selectedCards = [];
-                trickEl.classList.remove('burn-effect');
+                // Lokale Analyse als Fallback
+                const analysis = localAnalyze(text);
                 
-                if (!checkWin()) {
-                    // Same player continues
-                    updateDisplay();
-                    if (gameState.players[gameState.currentPlayer].type === 'bot') {
-                        setTimeout(botMove, 1500);
-                    }
-                }
-            }, 1200);
-        }
-
-        function handleTwo(cards, playerName) {
-            logAction(`${playerName} spielt eine 2! Gewinnt den Stich sofort!`, true);
-            gameState.currentTrick = cards;
-            gameState.firstPlay = false;
-            gameState.selectedCards = [];
-            
-            if (checkWin()) return;
-            
-            // Winner starts new round
-            setTimeout(() => {
-                endTrick(gameState.currentPlayer);
-            }, 1000);
-        }
-
-        function handleThree(playerIdx) {
-            const nextIdx = (playerIdx + 1) % gameState.players.length;
-            logAction(`🔄 ${gameState.players[playerIdx].name} tauscht Karten mit ${gameState.players[nextIdx].name}!`, true);
-            
-            // Swap hands
-            const temp = gameState.hands[playerIdx];
-            gameState.hands[playerIdx] = gameState.hands[nextIdx];
-            gameState.hands[nextIdx] = temp;
-            
-            // Sort both
-            sortHand(gameState.hands[playerIdx]);
-            sortHand(gameState.hands[nextIdx]);
-            
-            // Visual feedback
-            document.getElementById(`pos${playerIdx}`).classList.add('swap-animation');
-            document.getElementById(`pos${nextIdx}`).classList.add('swap-animation');
-            setTimeout(() => {
-                document.getElementById(`pos${playerIdx}`).classList.remove('swap-animation');
-                document.getElementById(`pos${nextIdx}`).classList.remove('swap-animation');
-            }, 1500);
-        }
-
-        function passTurn() {
-            if (gameState.trickType === null || gameState.currentPlayer === gameState.trickLeader) {
-                return; // Cannot pass
-            }
-            
-            const playerName = gameState.players[gameState.currentPlayer].name;
-            logAction(`${playerName} passt.`);
-            
-            gameState.consecutivePasses++;
-            
-            // If all others passed
-            if (gameState.consecutivePasses >= gameState.players.length - 1) {
+                btn.classList.remove('processing');
+                btn.innerHTML = '<i class="fas fa-check" style="margin-right:8px;"></i> Veröffentlicht';
                 setTimeout(() => {
-                    logAction(`${gameState.players[gameState.trickLeader].name} gewinnt den Stich.`);
-                    endTrick(gameState.trickLeader);
-                }, 500);
-                return;
-            }
-            
-            nextTurn();
-        }
-
-        function nextTurn() {
-            gameState.currentPlayer = (gameState.currentPlayer + 1) % gameState.players.length;
-            updateDisplay();
-            
-            if (gameState.players[gameState.currentPlayer].type === 'bot') {
-                setTimeout(botMove, 1500);
-            }
-        }
-
-        function endTrick(winner) {
-            gameState.currentPlayer = winner;
-            gameState.trickLeader = winner;
-            gameState.lastWinner = winner;
-            gameState.currentTrick = [];
-            gameState.trickType = null;
-            gameState.consecutivePasses = 0;
-            
-            updateDisplay();
-            
-            if (gameState.players[winner].type === 'bot') {
-                setTimeout(botMove, 1500);
-            }
-        }
-
-        function botMove() {
-            const hand = gameState.hands[gameState.currentPlayer];
-            const moves = findAllValidMoves(hand);
-            
-            if (moves.length > 0) {
-                const move = selectBestMove(moves, hand);
-                gameState.selectedCards = move.map(c => c.id);
-                playSelected();
-            } else {
-                passTurn();
-            }
-        }
-
-        function findAllValidMoves(hand) {
-            const moves = [];
-            
-            // Singles
-            hand.forEach(card => {
-                if (isValidPlay([card])) moves.push([card]);
-            });
-            
-            // Groups
-            if (!gameState.trickType || ['pair','triple','quad'].includes(gameState.trickType)) {
-                const groups = findGroups(hand);
-                groups.forEach(g => {
-                    if (isValidPlay(g)) moves.push(g);
-                });
-            }
-            
-            // Straights
-            if (!gameState.trickType || gameState.trickType === 'straight') {
-                const straights = findStraights(hand);
-                straights.forEach(s => {
-                    if (isValidPlay(s)) moves.push(s);
-                });
-            }
-            
-            return moves;
-        }
-
-        function findGroups(hand) {
-            const groups = [];
-            const byValue = {};
-            
-            hand.forEach(c => {
-                byValue[c.value] = byValue[c.value] || [];
-                byValue[c.value].push(c);
-            });
-            
-            Object.values(byValue).forEach(cards => {
-                if (cards.length >= 2) {
-                    // Add all pairs
-                    for (let i = 0; i < cards.length - 1; i++) {
-                        for (let j = i + 1; j < cards.length; j++) {
-                            groups.push([cards[i], cards[j]]);
-                        }
-                    }
-                }
-                if (cards.length >= 3) groups.push(cards.slice(0, 3));
-                if (cards.length === 4) groups.push(cards);
-            });
-            
-            return groups;
-        }
-
-        function findStraights(hand) {
-            const straights = [];
-            const unique = [...new Set(hand.map(c => c.value))].sort((a,b) => a-b);
-            
-            for (let i = 0; i < unique.length - 2; i++) {
-                for (let len = 3; len <= 5 && i + len <= unique.length; len++) {
-                    const seq = unique.slice(i, i + len);
-                    let isSeq = true;
-                    for (let j = 1; j < seq.length; j++) {
-                        if (seq[j] !== seq[j-1] + 1) isSeq = false;
-                    }
-                    
-                    if (isSeq) {
-                        const cards = seq.map(v => hand.find(c => c.value === v));
-                        if (cards.every(c => c)) straights.push(cards);
-                    }
-                }
-            }
-            return straights;
-        }
-
-        function selectBestMove(moves, hand) {
-            // Strategy: Play low if possible, save 2s, use 3s if hand is bad
-            const handValue = hand.reduce((sum, c) => sum + c.value, 0);
-            const isBadHand = handValue < 80; // Arbitrary threshold
-            
-            // Filter moves without 2s unless necessary
-            const noTwo = moves.filter(m => !m.some(c => c.value === 2));
-            const candidates = noTwo.length > 0 ? noTwo : moves;
-            
-            // Sort by value (low first)
-            candidates.sort((a, b) => {
-                const maxA = Math.max(...a.map(c => c.value));
-                const maxB = Math.max(...b.map(c => c.value));
-                return maxA - maxB;
-            });
-            
-            // If we have a 3 and bad hand, play it
-            if (isBadHand) {
-                const withThree = candidates.filter(m => m.some(c => c.value === 3));
-                if (withThree.length > 0) return withThree[0];
-            }
-            
-            return candidates[0];
-        }
-
-        function checkWin() {
-            if (gameState.hands[gameState.currentPlayer].length === 0) {
-                showWinner(gameState.currentPlayer);
-                return true;
-            }
-            return false;
-        }
-
-        function showWinner(winnerIdx) {
-            const modal = document.getElementById('winnerModal');
-            document.getElementById('winnerName').textContent = gameState.players[winnerIdx].name;
-            
-            // Calculate scores
-            let html = '<table style="width: 100%; border-collapse: collapse; margin: 15px 0;">';
-            html += '<tr style="border-bottom: 2px solid var(--gold-dark);">';
-            html += '<th style="padding: 10px; text-align: left;">Spieler</th>';
-            html += '<th style="padding: 10px; text-align: center;">Rest</th>';
-            html += '<th style="padding: 10px; text-align: right;">Punkte</th></tr>';
-            
-            const scores = gameState.hands.map((hand, idx) => {
-                const points = hand.reduce((sum, c) => sum + c.points, 0);
-                return {
-                    name: gameState.players[idx].name,
-                    cards: hand.length,
-                    points: idx === winnerIdx ? 0 : points,
-                    isWinner: idx === winnerIdx
-                };
-            }).sort((a, b) => a.points - b.points);
-            
-            scores.forEach(s => {
-                const style = s.isWinner ? 'color: var(--gold); font-weight: bold;' : '';
-                const icon = s.isWinner ? '👑 ' : '';
-                html += `<tr style="${style}; border-bottom: 1px solid rgba(212,175,55,0.2);">
-                    <td style="padding: 8px;">${icon}${s.name}</td>
-                    <td style="padding: 8px; text-align: center;">${s.cards}</td>
-                    <td style="padding: 8px; text-align: right;">${s.points}</td>
-                </tr>`;
-            });
-            html += '</table>';
-            
-            document.getElementById('winnerStats').innerHTML = html;
-            modal.classList.add('active');
-        }
-
-        function formatCards(cards) {
-            if (cards.length === 1) return cards[0].name;
-            if (cards.length === 2) return `ein Paar ${cards[0].label}`;
-            if (cards.length === 3) return `einen Drilling ${cards[0].label}`;
-            if (cards.length === 4) return `einen VIERLING ${cards[0].label}!`;
-            return `eine Straße (${cards[0].label}-${cards[cards.length-1].label})`;
-        }
-
-        function logAction(msg, highlight = false) {
-            const el = document.getElementById('lastAction');
-            el.textContent = msg;
-            el.style.color = highlight ? '#ffeb3b' : 'var(--gold-light)';
-            el.style.fontWeight = highlight ? 'bold' : 'normal';
-        }
-
-        function showHelp() {
-            const modal = document.getElementById('helpModal');
-            const situation = document.getElementById('helpSituation');
-            const required = document.getElementById('helpRequired');
-            const moves = document.getElementById('helpMoves');
-            
-            if (!gameState.gameStarted) {
-                situation.textContent = 'Kein aktives Spiel. Starte ein neues Spiel im Menü.';
-                required.textContent = '';
-                moves.innerHTML = '<div class="move-tag">Menü öffnen</div>';
-                modal.classList.add('active');
-                return;
-            }
-            
-            // Current situation
-            if (gameState.trickType) {
-                const names = {
-                    'single': 'Einzelkarte',
-                    'pair': 'Paar',
-                    'triple': 'Drilling',
-                    'quad': 'Vierling',
-                    'straight': 'Straße'
-                };
-                const high = Math.max(...gameState.currentTrick.map(c => c.value));
-                situation.textContent = `Aktuell auf dem Tisch: ${names[gameState.trickType]} (Höchste: ${high})`;
-                required.textContent = `Du musst ein ${names[gameState.trickType]} mit Wert > ${high} spielen`;
-            } else {
-                situation.textContent = 'Neue Runde - du kannst frei wählen';
-                required.textContent = 'Spiele beliebige Kombination (Einzel, Paar, Drilling, Straße...)';
-            }
-            
-            // Possible moves
-            if (gameState.currentPlayer === 0 && gameState.players[0].type === 'human') {
-                const hand = gameState.hands[0];
-                const validMoves = findAllValidMoves(hand);
+                    btn.innerHTML = '<i class="fas fa-robot" style="margin-right:8px;"></i> An KI senden & veröffentlichen';
+                }, 2000);
                 
-                if (validMoves.length === 0) {
-                    moves.innerHTML = '<div class="move-tag" style="background: rgba(196,30,58,0.3);">Du kannst nur passen</div>';
-                } else {
-                    moves.innerHTML = validMoves.map(m => {
-                        const type = determineType(m);
-                        const high = Math.max(...m.map(c => c.value));
-                        return `<div class="move-tag">${formatType(type)} ${high} (${m.length} Karten)</div>`;
-                    }).join('');
-                }
+                return analysis;
+                
+            } catch (error) {
+                console.error('Gemini Error:', error);
+                btn.classList.remove('processing');
+                return localAnalyze(text);
+            }
+        }
+
+        function localAnalyze(text) {
+            // Einfache Keyword-Erkennung als Demo
+            let lat = 50.4501, lng = 30.5234, title = "Unbekannter Vorfall";
+            let confidence = 65;
+            
+            const lower = text.toLowerCase();
+            
+            if (lower.includes('kiew') || lower.includes('kyiv') || lower.includes('ukraine')) {
+                lat = 50.4501; lng = 30.5234; title = "Vorfall Ukraine/Kiew";
+                confidence = 88;
+            } else if (lower.includes('gaza') || lower.includes('israel') || lower.includes('palästina')) {
+                lat = 31.5017; lng = 34.4667; title = "Nahost Konflikt";
+                confidence = 85;
+            } else if (lower.includes('taiwan') || lower.includes('taipei')) {
+                lat = 25.0330; lng = 121.5654; title = "Taiwan-Straße";
+                confidence = 75;
+            } else if (lower.includes('iran') || lower.includes('teheran')) {
+                lat = 35.6892; lng = 51.3890; title = "Iran Region";
+                confidence = 82;
             } else {
-                moves.innerHTML = '<div class="move-tag">Du bist nicht am Zug</div>';
+                // Zufällige Koordinaten für Demo
+                lat = 30 + Math.random() * 20;
+                lng = -10 + Math.random() * 60;
+                confidence = 45;
             }
             
-            modal.classList.add('active');
+            // Koordinaten aus Text extrahieren (einfache Regex)
+            const coordMatch = text.match(/(\d+\.\d+)[,\s]+(\d+\.\d+)/);
+            if (coordMatch) {
+                lat = parseFloat(coordMatch[1]);
+                lng = parseFloat(coordMatch[2]);
+                confidence += 10;
+            }
+            
+            return {
+                title: title,
+                lat: lat,
+                lng: lng,
+                summary: text.substring(0, 120),
+                confidence: Math.min(confidence, 99),
+                timestamp: Date.now(),
+                timezone: Math.round(lng / 15), // Ungefähre Zeitzone aus Längengrad
+                source: 'Telegram/Gemini'
+            };
         }
 
-        function leaveGame() {
-            if (confirm('Möchtest du das Spiel wirklich verlassen?')) {
-                showScreen('menu');
-                gameState.gameStarted = false;
-                gameState.selectedCards = [];
+        // ================== INTEL HANDLING ==================
+        async function submitIntel() {
+            const input = document.getElementById('intelInput');
+            const text = input.value.trim();
+            
+            if (!text) return;
+            
+            const analysis = await analyzeWithGemini(text);
+            publishIntel(analysis);
+            input.value = '';
+            
+            // Zum Telegram-Inbox hinzufügen
+            addToTelegramInbox(text);
+        }
+
+        function publishIntel(intel) {
+            intel.time = new Date().toLocaleTimeString('de-DE', {hour:'2-digit', minute:'2-digit'});
+            intel.id = Date.now();
+            
+            intelDatabase.unshift(intel);
+            if (intelDatabase.length > 50) intelDatabase.pop();
+            
+            addIntelMarker(intel);
+            addToTicker(`${intel.title} | ${intel.summary.substring(0, 50)}...`, 'alert');
+            
+            // Radio Ansage wenn gerade aktiv
+            if (radioActive && Math.random() > 0.7) {
+                setTimeout(() => {
+                    speakText(`Neuer Eingang. ${intel.title}.`);
+                }, 1000);
             }
         }
 
-        function showError(msg) {
-            document.getElementById('errorMessage').textContent = msg;
-            document.getElementById('errorModal').classList.add('active');
+        function simulateIncomingIntel() {
+            const demos = [
+                {title:"Ballistischer Angriff", lat:33.3152, lng:44.3661, sum:"Einschlag in Bagdad gemeldet", conf:91},
+                {title:"Maritime Konfrontation", lat:24.4798, lng:118.0894, sum:"Chinesische Schiffe blockieren", conf:78},
+                {title:"Grenzgefechte", lat:55.7558, lng:37.6173, sum:"Artillerie an russischer Grenze", conf:85}
+            ];
+            const random = demos[Math.floor(Math.random() * demos.length)];
+            
+            publishIntel({
+                ...random,
+                summary: random.sum,
+                timestamp: Date.now(),
+                timezone: 3,
+                source: 'Automated Sensor'
+            });
         }
 
-        function closeModal(id) {
-            document.getElementById(id).classList.remove('active');
+        function addToTicker(text, type) {
+            const ticker = document.getElementById('ticker-content');
+            const item = document.createElement('span');
+            item.className = `ticker-item ${type === 'alert' ? 'alert new' : ''}`;
+            item.textContent = `► ${new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})} | ${text}`;
+            ticker.appendChild(item);
+            
+            // Duplizieren für Loop
+            if (ticker.children.length < 3) {
+                ticker.innerHTML += ticker.innerHTML;
+            }
         }
 
-        // Touch events
-        document.addEventListener('dblclick', e => e.preventDefault());
+        function addToTelegramInbox(text) {
+            const inbox = document.getElementById('tgInbox');
+            const msg = document.createElement('div');
+            msg.className = 'tg-message';
+            msg.innerHTML = `
+                <div>${text.substring(0, 100)}${text.length > 100 ? '...' : ''}</div>
+                <div class="tg-message-time">${new Date().toLocaleTimeString()}</div>
+            `;
+            inbox.insertBefore(msg, inbox.firstChild);
+            
+            if (inbox.children.length > 10) {
+                inbox.removeChild(inbox.lastChild);
+            }
+        }
+
+        // ================== ACCESS CONTROL ==================
+        function checkAccess() {
+            const code = document.getElementById('inviteCode').value.trim().toUpperCase();
+            
+            if (CONFIG.INVITE_CODES.includes(code)) {
+                localStorage.setItem('warmap_access', 'granted');
+                document.getElementById('accessModal').style.display = 'none';
+                speakText("Zugang gewährt. Willkommen bei WarMap Intelligence.");
+                startRadio();
+            } else {
+                alert('Ungültiger Code. Nutze INTEL-2026 oder SWATHI-2026');
+            }
+        }
+
+        function requestTelegramCode() {
+            window.open(`https://t.me/WarmapIntelBot?start=auth`, '_blank');
+        }
+
+        function toggleTelegramPanel() {
+            document.getElementById('telegramPanel').classList.toggle('open');
+        }
+
+        function downloadIntel() {
+            const dataStr = "data:text/json;charset=utf-8," + 
+                encodeURIComponent(JSON.stringify(intelDatabase, null, 2));
+            const link = document.createElement('a');
+            link.setAttribute("href", dataStr);
+            link.setAttribute("download", `WarMap_Intel_${new Date().toISOString().slice(0,10)}.json`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+        }
+
+        function loadInitialData() {
+            // Initiale Demo-Daten
+            const initial = [
+                {title:"Drohnenangriff Kiew", lat:50.4501, lng:30.5234, summary:"Shahed-Drohnen über Stadt", confidence:92, timezone:2},
+                {title:"Houthi Rakete", lat:24.7136, lng:46.6753, summary:"Abfang über Riad", confidence:87, timezone:3},
+                {title:"Taiwan-Strasse", lat:25.0330, lng:121.5654, summary:"Maritime Aktivität", confidence:76, timezone:8}
+            ];
+            
+            initial.forEach(intel => {
+                intel.time = "18:00";
+                intel.timestamp = Date.now() - 3600000;
+                intel.source = "System";
+                publishIntel(intel);
+            });
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                document.getElementById('telegramPanel').classList.remove('open');
+            }
+            if (e.key === 't' && e.ctrlKey) {
+                e.preventDefault();
+                toggleTelegramPanel();
+            }
+        });
     </script>
 </body>
 </html>
